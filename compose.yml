@@ -1,0 +1,14 @@
+---
+services:
+  autoscan:
+    image: autoscan:latest
+    container_name: autoscan
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=America/Chicago
+    volumes:
+      - /docker/autoscan/config:/config
+      - /docker/autoscan/logs:/logs
+      - /pathToMedia:/media
+    restart: unless-stopped

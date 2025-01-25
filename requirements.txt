@@ -1,0 +1,4 @@
+requests
+plexapi
+apscheduler
+colorlog
