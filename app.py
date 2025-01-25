@@ -104,8 +104,8 @@ if config_file_valid == True and os.path.exists(conf_loc_path_file) == True:
             logger.addHandler(gotify_handler)
         
         # Create all the api servers
-        if 'plex_url' in data and 'plex_api_key' in data and 'plex_admin_user_name' in data:
-            plex_api = PlexAPI(data['plex_url'], data['plex_api_key'], data['plex_admin_user_name'], logger)
+        if 'plex_url' in data and 'plex_api_key' in data:
+            plex_api = PlexAPI(data['plex_url'], data['plex_api_key'], logger)
         if 'emby_url' in data and 'emby_api_key' in data:
             emby_api = EmbyAPI(data['emby_url'], data['emby_api_key'], logger)
         if 'jellyfin_url' in data and 'jellyfin_api_key' in data:
@@ -118,7 +118,7 @@ if config_file_valid == True and os.path.exists(conf_loc_path_file) == True:
         # Create the Sync Watched Status Service
         if platform == "linux":
             if 'auto_scan' in data:
-                services.append(AutoScan('\33[96m', plex_api, emby_api, jellyfin_api, data['auto_scan'], logger, scheduler))
+                services.append(AutoScan(plex_api, emby_api, jellyfin_api, data['auto_scan'], logger, scheduler))
             else:
                 logger.error('Configuration file problem no auto_scan section found!')
         

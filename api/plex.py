@@ -4,9 +4,8 @@ from plexapi.server import PlexServer
 from common.utils import get_plex_ansi_code, get_log_header, get_tag
 
 class PlexAPI:
-    def __init__(self, url, api_key, admin_user_name, logger):
+    def __init__(self, url, api_key, logger):
         self.plex_server = PlexServer(url.rstrip('/'), api_key)
-        self.admin_user_name = admin_user_name
         self.logger = logger
         self.item_invalid_type = None
         self.valid = False

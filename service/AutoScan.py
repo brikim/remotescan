@@ -36,8 +36,8 @@ class CheckPathData:
     deleted: bool
 
 class AutoScan(ServiceBase):
-    def __init__(self, ansi_code, plex_api, emby_api, jellyfin_api, config, logger, scheduler):
-        super().__init__(ansi_code, self.__module__, config, logger, scheduler)
+    def __init__(self, plex_api, emby_api, jellyfin_api, config, logger, scheduler):
+        super().__init__(logger, scheduler)
         
         self.plex_api = plex_api
         self.emby_api = emby_api
@@ -46,10 +46,10 @@ class AutoScan(ServiceBase):
         self.ignore_folder_with_name = []
         self.valid_file_extensions = []
         
-        self.seconds_monitor_rate = 0
-        self.seconds_before_notify = 0
-        self.seconds_between_notifies = 0
-        self.seconds_before_inotify_modify = 0
+        self.seconds_monitor_rate = 1
+        self.seconds_before_notify = 90
+        self.seconds_between_notifies = 15
+        self.seconds_before_inotify_modify = 1
         self.last_notify_time = 0.0
         
         self.scans = []
@@ -68,47 +68,51 @@ class AutoScan(ServiceBase):
         self.check_new_paths = []
         
         try:
-            self.seconds_monitor_rate = max(config['seconds_monitor_rate'], 1)
-            self.seconds_before_notify = max(config['seconds_before_notify'], 30)
-            self.seconds_between_notifies = max(config['seconds_between_notifies'], 10)
-            self.seconds_before_inotify_modify = max(config['seconds_before_inotify_modify'], 1)
+            if 'seconds_monitor_rate' in config:
+                self.seconds_monitor_rate = max(config['seconds_monitor_rate'], 1)
+            if 'seconds_before_notify' in config:
+                self.seconds_before_notify = max(config['seconds_before_notify'], 30)
+            if 'seconds_between_notifies' in config:
+                self.seconds_between_notifies = max(config['seconds_between_notifies'], 10)
+            if 'seconds_before_inotify_modify' in config:
+                self.seconds_before_inotify_modify = max(config['seconds_before_inotify_modify'], 1)
             
-            plex_notify_found = False
-            emby_notify_found = False
-            jellyfin_notify_found = False
             for scan in config['scans']:
                 plex_library = ''
                 if 'plex_library' in scan:
-                    if self.plex_api.get_library(scan['plex_library']) != self.plex_api.get_invalid_type():
-                        if self.plex_api.get_valid() == True:
+                    if self.plex_api is not None and self.plex_api.get_valid() == True:
+                        if self.plex_api.get_library(scan['plex_library']) != self.plex_api.get_invalid_type():
                             plex_library = scan['plex_library']
-                        plex_notify_found = True
+                        else:
+                            self.log_warning('{} {} defined but not found'.format(get_formatted_plex(), get_tag('library', scan['plex_library'])))
                     else:
-                        self.log_error('{} {} defined but not found'.format(get_formatted_plex(), get_tag('library', scan['plex_library'])))
-                
+                        self.log_warning('{} {} defined in scan but api not valid'.format(get_formatted_plex(), get_tag('library', scan['plex_library'])))
+                        
                 emby_library_name = ''
                 emby_library_id = ''
                 if 'emby_library' in scan:
-                    emby_library = self.emby_api.get_library_from_name(scan['emby_library'])
-                    if emby_library != self.emby_api.get_invalid_item_id():
-                        if self.emby_api.get_valid() == True:
+                    if self.emby_api is not None and self.emby_api.get_valid() == True:
+                        emby_library = self.emby_api.get_library_from_name(scan['emby_library'])
+                        if emby_library != self.emby_api.get_invalid_item_id():
                             emby_library_name = emby_library['Name']
                             emby_library_id = emby_library['Id']
-                        emby_notify_found = True
+                        else:
+                            self.log_warning('{} {} defined but not found'.format(get_formatted_emby(), get_tag('library', scan['emby_library'])))
                     else:
-                        self.log_error('{} {} defined but not found'.format(get_formatted_emby(), get_tag('library', scan['emby_library'])))
+                        self.log_warning('{} {} defined in scan but api not valid {}'.format(get_formatted_emby(), get_tag('library', scan['emby_library'])))
                         
                 jellyfin_library_name = ''
                 jellyfin_library_id = ''
                 if 'jellyfin_library' in scan:
-                    jellyfin_library = self.jellyfin_api.get_library_from_name(scan['jellyfin_library'])
-                    if jellyfin_library != self.jellyfin_api.get_invalid_item_id():
-                        if jellyfin_api.get_valid() == True:
+                    if self.jellyfin_api is not None and jellyfin_api.get_valid() == True:
+                        jellyfin_library = self.jellyfin_api.get_library_from_name(scan['jellyfin_library'])
+                        if jellyfin_library != self.jellyfin_api.get_invalid_item_id():
                             jellyfin_library_name = jellyfin_library['Name']
                             jellyfin_library_id = jellyfin_library['Id']
-                        jellyfin_notify_found = True
+                        else:
+                            self.log_warning('{} {} defined but not found'.format(get_formatted_jellyfin(), get_tag('library', scan['jellyfin_library'])))
                     else:
-                        self.log_error('{} {} defined but not found'.format(get_formatted_jellyfin(), get_tag('library', scan['jellyfin_library'])))
+                        self.log_warning('{} {} defined in scan but api not valid {}'.format(get_formatted_jellyfin(), get_tag('library', scan['jellyfin_library'])))
                         
                 scan_info = ScanInfo(scan['name'], plex_library != '', plex_library, emby_library_name != '', emby_library_name, emby_library_id, jellyfin_library_name != '', jellyfin_library_name, jellyfin_library_id, 0.0)
                 
@@ -117,15 +121,6 @@ class AutoScan(ServiceBase):
                 
                 self.scans.append(scan_info)
             
-            if plex_notify_found == True and self.plex_api.get_valid() == False:
-                self.log_warning('Notifications for {} is set but API not valid {}'.format(get_formatted_plex(), get_tag('plex_valid', self.plex_api.get_valid())))
-            
-            if emby_notify_found == True and self.emby_api.get_valid() == False:
-                self.log_warning('Notifications for {} is set but API not valid {}'.format(get_formatted_emby(), get_tag('emby_valid', self.emby_api.get_valid())))
-            
-            if jellyfin_notify_found == True and self.jellyfin_api.get_valid() == False:
-                self.log_warning('Notifications for {} is set but API not valid {}'.format(get_formatted_jellyfin(), get_tag('jellyfin_valid', self.jellyfin_api.get_valid())))
-                    
             for folder in config['ignore_folder_with_name']:
                 self.ignore_folder_with_name.append(folder['ignore_folder'])
                 
@@ -383,5 +378,4 @@ class AutoScan(ServiceBase):
         self.monitor_thread = Thread(target=self._monitor, args=()).start()
         
     def init_scheduler_jobs(self):
-        self.log_service_enabled()
         self.start()
