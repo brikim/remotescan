@@ -136,8 +136,11 @@ Not required unless wanting to send Warnings or Errors to Gotify
 | jellyfin_library | Jellyfin library to notify of updates on monitor changes. Not required. |
 | paths            | A list of physical paths defined by container_path to monitor for this scan. Paths should be based off of mounted volume /media or other as defined by user. Multiple paths needed if media server library consists of multiple paths |
 
-Optional. List of folders to ignore. 
-WARNING - Be careful with name! If to generic folder may get ignored in monitor.
+Optional. List of folders to ignore.
+---
+**WARNING**
+Be careful with name! If to generic folder may get ignored in monitor.
+---
 An example usage would be for synology NAS ignore @eaDir folders
 | Ignore folders | Function |
 | :--------------- | :------------------------ |
