@@ -10,7 +10,7 @@ Autoscan uses python to monitor defined folders, add new folders to monitor and 
 Autoscan offers a pre-compiled [docker image](https://hub.docker.com/repository/docker/brikim/autoscan/general)
 
 ### Usage
-User docker compose to install auto scan
+Use docker compose to run Autoscan
 
 ### compose.yml
 ```yaml
