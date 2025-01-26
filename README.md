@@ -139,12 +139,12 @@ Not required unless wanting to send Warnings or Errors to Gotify
 Optional. List of folders to ignore.
 ```
 **WARNING**
-Be careful with name! If to generic folder may get ignored in monitor.
+Be careful with the name! If it is too generic the folder may get ignored for the monitors.
 ```
 An example usage would be for synology NAS ignore @eaDir folders
 | Ignore folders | Function |
 | :--------------- | :------------------------ |
-| ignore_folder    | Ignore scans containing the folder |
+| ignore_folder    | Ignore updates for paths containing the folder |
 
 Optional. List of valid file extensions that must be in the folder to notify media servers to re-scan
 | Valid File Extension | Function |
