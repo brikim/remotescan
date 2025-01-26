@@ -72,13 +72,19 @@ A configuration file is required to use Autoscan. Create a config.yml file in th
         "seconds_before_inotify_modify": 1,
         
         "scans": [
-            {"name": "scanName", "plex_library": "plexLibraryName", "emby_library": "EmbyLibraryName", "jellyfin_library": "JellyfinLibraryName"
+            {"name": "scanName", 
+             "plex_library": "plexLibraryName", 
+             "emby_library": "EmbyLibraryName", 
+             "jellyfin_library": "JellyfinLibraryName",
              "paths": [
                 { "container_path": "/media/Path1" },
                 { "container_path": "/media/Path2" }
              ]
             },
-            {"name": "scanName2", "plex_library": "plexLibraryName", "emby_library": "EmbyLibraryName", "jellyfin_library": "JellyfinLibraryName"
+            {"name": "scanName2", 
+             "plex_library": "plexLibraryName", 
+             "emby_library": "EmbyLibraryName", 
+             "jellyfin_library": "JellyfinLibraryName",
              "paths": [
                 { "container_path": "/media/Path3" }
              ]
@@ -94,6 +100,27 @@ A configuration file is required to use Autoscan. Create a config.yml file in th
     }
 }
 ```
+
+#### Option Descriptions
+You only have to define the variables for servers in your system. For plex only define plex_url and plex_api_key in your file. The emby and jellyfin variables are not required.
+| Media Server | Function |
+| :----------- | :------------------------ |
+| plex_url           | Url to your plex server (Make sure you include the port if not reverse proxy) |
+| plex_api_key       | API Key to access your plex server |
+| emby_url           | Url to your emby server (Make sure you include the port if not reverse proxy) |
+| emby_api_key       | API Key to access your emby server |
+| jellyfin_url       | Url to your jellyfin server (Make sure you include the port if not reverse proxy) |
+| jellyfin_api_key   | API Key to access your jellyfin server |
+
+#### Gotify Logging
+Not required unless wanting to send Warnings or Errors to Gotify
+| Gotify | Function |
+| :--------------- | :------------------------ |
+| enabled          | Enable the function with 'True' |
+| url              | Url including port to your gotify server |
+| app_token        | Gotify app token to be used to send notifications |
+| message_title    | Title to put in the title bar of the message |
+| priority         | The priority of the message to send to gotify |
 
 ## Logs
 
