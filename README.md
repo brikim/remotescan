@@ -133,12 +133,17 @@ Not required unless wanting to send Warnings or Errors to Gotify
 | name             | Unique name defined for this scan |
 | plex_library     | Plex library to notify of updates on monitor changes. Not required. |
 | emby_library     | Emby library to notify of updates on monitor changes. Not required. |
-| paths            | A list of physical paths to monitor for this scan. Paths should be based off of mounted volume /media or other as defined by user. Multiple paths needed if media server library consists of multiple paths |
+| jellyfin_library | Jellyfin library to notify of updates on monitor changes. Not required. |
+| paths            | A list of physical paths defined by container_path to monitor for this scan. Paths should be based off of mounted volume /media or other as defined by user. Multiple paths needed if media server library consists of multiple paths |
 
-## Logs
+Optional. List of folders to ignore. 
+WARNING - Be careful with name! If to generic folder may get ignored in monitor.
+An example usage would be for synology NAS ignore @eaDir folders
+| Ignore folders | Function |
+| :--------------- | :------------------------ |
+| ignore_folder    | Ignore scans containing the folder |
 
-You can also export the logs by mounting a volume on `/logs`:
-```
-volumes:
-    /logPath:/logs
-```
+Optional. List of valid file extensions that must be in the folder to notify media servers to re-scan
+| Valid File Extension | Function |
+| :--------------- | :------------------------ |
+| valid_file_extensions    | A comma separated list of extensions. If defined the monitor has to detect a change to this type of file before notifying media servers |
