@@ -1,6 +1,9 @@
 """
 Autoscan
 """
+
+version = 'v1.0.0'
+
 import sys
 import os
 import json
@@ -111,7 +114,7 @@ if config_file_valid == True and os.path.exists(conf_loc_path_file) == True:
         if 'jellyfin_url' in data and 'jellyfin_api_key' in data:
             jellyfin_api = JellyfinAPI(data['jellyfin_url'], data['jellyfin_api_key'], logger)
         
-        logger.info('Starting Autoscan *************************************')
+        logger.info('Starting Autoscan {} *************************************'.format(version))
         
         # Create the services ####################################
         
