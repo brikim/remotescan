@@ -5,8 +5,10 @@ from datetime import datetime
 import threading
 from threading import Thread
 from dataclasses import dataclass, field
+from logging import Logger
+from apscheduler.schedulers.blocking import BlockingScheduler
 from external.PyInotify.inotify import adapters, constants
-
+from typing import Any, List
 from api.plex import PlexAPI
 from api.emby import EmbyAPI
 from api.jellyfin import JellyfinAPI
@@ -14,18 +16,13 @@ from service.ServiceBase import ServiceBase
 from common.utils import get_tag, get_formatted_emby, get_formatted_plex, get_formatted_jellyfin, build_target_string
 
 @dataclass
-class ScanInfo:
+class ScanConfigInfo:
     name: str
-    plex_library_valid: bool
     plex_library: str
-    emby_library_valid: bool
     emby_library: str
-    emby_library_id: str
-    jellyfin_library_valid: bool
     jellyfin_library: str
-    jellyfin_library_id: str
     time: float
-    paths: list = field(default_factory=list)
+    paths: list[str] = field(default_factory=list)
 
 @dataclass
 class CheckPathData:
@@ -36,36 +33,36 @@ class CheckPathData:
     deleted: bool
 
 class AutoScan(ServiceBase):
-    def __init__(self, plex_api, emby_api, jellyfin_api, config, logger, scheduler):
+    def __init__(self, plex_api: PlexAPI, emby_api: EmbyAPI, jellyfin_api: JellyfinAPI, config: Any, logger: Logger, scheduler: BlockingScheduler):
         super().__init__(logger, scheduler)
         
         self.plex_api = plex_api
         self.emby_api = emby_api
         self.jellyfin_api = jellyfin_api
         
-        self.ignore_folder_with_name = []
-        self.valid_file_extensions = []
+        self.ignore_folder_with_name: list[str] = []
+        self.valid_file_extensions: list[str] = []
         
-        self.seconds_monitor_rate = 1
-        self.seconds_before_notify = 90
-        self.seconds_between_notifies = 15
-        self.seconds_before_inotify_modify = 1
-        self.last_notify_time = 0.0
+        self.seconds_monitor_rate: int = 1
+        self.seconds_before_notify: int = 90
+        self.seconds_between_notifies: int = 15
+        self.seconds_before_inotify_modify: int = 1
+        self.last_notify_time: float = 0.0
         
-        self.scans = []
+        self.scan_configs: list[ScanConfigInfo] = []
         
-        self.monitors = []
+        self.monitors: list[ScanConfigInfo] = []
         self.monitor_lock = threading.Lock()
-        self.monitor_thread = None
+        self.monitor_thread: Thread = None
         
         self.watched_paths_lock = threading.Lock()
-        self.watched_paths = []
+        self.watched_paths: list[str] = []
         
-        self.threads = []
+        self.threads: list[Thread] = []
         self.stop_threads = False
         
         self.check_new_paths_lock = threading.Lock()
-        self.check_new_paths = []
+        self.check_new_paths: list[CheckPathData] = []
         
         try:
             if 'seconds_monitor_rate' in config:
@@ -78,55 +75,30 @@ class AutoScan(ServiceBase):
                 self.seconds_before_inotify_modify = max(config['seconds_before_inotify_modify'], 1)
             
             for scan in config['scans']:
-                plex_library = ''
+                plex_library: str = ''
                 if 'plex_library' in scan:
-                    if self.plex_api is not None and self.plex_api.get_valid() == True:
-                        if self.plex_api.get_library(scan['plex_library']) != self.plex_api.get_invalid_type():
-                            plex_library = scan['plex_library']
-                        else:
-                            self.log_warning('{} {} defined but not found'.format(get_formatted_plex(), get_tag('library', scan['plex_library'])))
-                    else:
-                        self.log_warning('{} {} defined in scan but api not valid'.format(get_formatted_plex(), get_tag('library', scan['plex_library'])))
+                    plex_library = scan['plex_library']
                         
-                emby_library_name = ''
-                emby_library_id = ''
+                emby_library: str = ''
                 if 'emby_library' in scan:
-                    if self.emby_api is not None and self.emby_api.get_valid() == True:
-                        emby_library = self.emby_api.get_library_from_name(scan['emby_library'])
-                        if emby_library != self.emby_api.get_invalid_item_id():
-                            emby_library_name = emby_library['Name']
-                            emby_library_id = emby_library['Id']
-                        else:
-                            self.log_warning('{} {} defined but not found'.format(get_formatted_emby(), get_tag('library', scan['emby_library'])))
-                    else:
-                        self.log_warning('{} {} defined in scan but api not valid {}'.format(get_formatted_emby(), get_tag('library', scan['emby_library'])))
+                    emby_library = scan['emby_library']
                         
-                jellyfin_library_name = ''
-                jellyfin_library_id = ''
+                jellyfin_library: str = ''
                 if 'jellyfin_library' in scan:
-                    if self.jellyfin_api is not None and jellyfin_api.get_valid() == True:
-                        jellyfin_library = self.jellyfin_api.get_library_from_name(scan['jellyfin_library'])
-                        if jellyfin_library != self.jellyfin_api.get_invalid_item_id():
-                            jellyfin_library_name = jellyfin_library['Name']
-                            jellyfin_library_id = jellyfin_library['Id']
-                        else:
-                            self.log_warning('{} {} defined but not found'.format(get_formatted_jellyfin(), get_tag('library', scan['jellyfin_library'])))
-                    else:
-                        self.log_warning('{} {} defined in scan but api not valid {}'.format(get_formatted_jellyfin(), get_tag('library', scan['jellyfin_library'])))
-                        
-                scan_info = ScanInfo(scan['name'], plex_library != '', plex_library, emby_library_name != '', emby_library_name, emby_library_id, jellyfin_library_name != '', jellyfin_library_name, jellyfin_library_id, 0.0)
+                    jellyfin_library = scan['jellyfin_library']
+                
+                scan_config = ScanConfigInfo(scan['name'], plex_library, emby_library, jellyfin_library, 0.0)
                 
                 for path in scan['paths']:
-                    scan_info.paths.append(path['container_path'])
+                    scan_config.paths.append(path['container_path'])
                 
-                self.scans.append(scan_info)
+                self.scan_configs.append(scan_config)
             
             for folder in config['ignore_folder_with_name']:
                 self.ignore_folder_with_name.append(folder['ignore_folder'])
                 
             if config['valid_file_extensions'] != '':
                 self.valid_file_extensions = config['valid_file_extensions'].split(',')
-                
                 
         except Exception as e:
             self.log_error('Read config {}'.format(get_tag('error', e)))
@@ -137,7 +109,7 @@ class AutoScan(ServiceBase):
         temp_file_path = '/temp.txt'
         
         # Create a temp file to notify the inotify adapters
-        for scan in self.scans:
+        for scan in self.scan_configs:
             for path in scan.paths:
                 temp_file = path + temp_file_path
                 with open(temp_file, 'w') as file:
@@ -151,7 +123,7 @@ class AutoScan(ServiceBase):
             self.monitors.clear()
                             
         # clean up the temp files
-        for scan in self.scans:
+        for scan in self.scan_configs:
             for path in scan.paths:
                 temp_file = path + temp_file_path
                 os.remove(temp_file)
@@ -159,13 +131,13 @@ class AutoScan(ServiceBase):
         
         self.log_info('Successful shutdown')
     
-    def _get_scan_path_valid(self, path):
+    def _get_scan_path_valid(self, path: str) -> bool:
         for folder_name in self.ignore_folder_with_name:
             if folder_name in path:
                 return False
         return True
     
-    def _get_scan_extension_valid(self, filename):
+    def _get_scan_extension_valid(self, filename: str) -> bool:
         if len(self.valid_file_extensions) > 0:
             for valid_extension in self.valid_file_extensions:
                 if filename.endswith(valid_extension):
@@ -174,27 +146,63 @@ class AutoScan(ServiceBase):
         else:
             # No valid file extensions defined so all extensions are valid
             return True
-        
-    def _notify_media_servers(self, monitor):
+    
+    def _notify_plex(self, plex_library_name: str) -> bool:
+        if plex_library_name != '':
+            plex_valid = self.plex_api.get_valid()
+            if plex_valid == True:
+                if self.plex_api.get_library(plex_library_name) != self.plex_api.get_invalid_type():
+                    self.plex_api.set_library_scan(plex_library_name)
+                    return True
+                else:
+                    self.log_warning('{} {} not found on server'.format(get_formatted_plex(), get_tag('library', plex_library_name)))
+            else:
+                self.log_warning('{} server not available'.format(get_formatted_plex()))
+        return False
+    
+    def _notify_emby(self, emby_library_name: str) -> bool:
+        if emby_library_name != '':
+            if self.emby_api.get_valid() == True:
+                library_id = self.emby_api.get_library_id(emby_library_name)
+                if library_id != self.emby_api.get_invalid_item_id():
+                    self.emby_api.set_library_scan(library_id)
+                    return True
+                else:
+                    self.log_warning('{} {} not found on server'.format(get_formatted_emby(), get_tag('library', emby_library_name)))
+            else:
+                self.log_warning('{} server not available'.format(get_formatted_emby()))
+        return False
+    
+    def _notify_jellyfin(self, jellyfin_library_name: str) -> bool:
+        if jellyfin_library_name != '':
+            if self.jellyfin_api.get_valid() == True:
+                library_id = self.jellyfin_api.get_library_id(jellyfin_library_name)
+                if library_id != self.jellyfin_api.get_invalid_item_id():
+                    self.jellyfin_api.set_library_scan(library_id)
+                    return True
+                else:
+                    self.log_warning('{} {} not found on server'.format(get_formatted_jellyfin(), get_tag('library', jellyfin_library_name)))
+            else:
+                self.log_warning('{} server not available'.format(get_formatted_jellyfin()))
+        return False
+    
+    def _notify_media_servers(self, scan_config: ScanConfigInfo):
         # all the libraries in this monitor group are identical so only one scan is required
         target = ''
-        if monitor.plex_library_valid == True:
-            self.plex_api.set_library_scan(monitor.plex_library)
-            target = build_target_string(target, get_formatted_plex(), monitor.plex_library)
-        if monitor.emby_library_valid == True:
-            self.emby_api.set_library_scan(monitor.emby_library_id)
-            target = build_target_string(target, get_formatted_emby(), monitor.emby_library)
-        if monitor.jellyfin_library_valid == True:
-            self.jellyfin_api.set_library_scan(monitor.jellyfin_library_id)
-            target = build_target_string(target, get_formatted_jellyfin(), monitor.jellyfin_library)
+        if self._notify_plex(scan_config.plex_library) == True:
+            target = build_target_string(target, get_formatted_plex(), scan_config.plex_library)
+        if self._notify_emby(scan_config.emby_library) == True:
+            target = build_target_string(target, get_formatted_emby(), scan_config.emby_library)
+        if self._notify_jellyfin(scan_config.jellyfin_library) == True:
+            target = build_target_string(target, get_formatted_jellyfin(), scan_config.jellyfin_library)
         
         # Loop through all the paths in this monitor and log that it has been sent to the target
         if target != '':
-            for path in monitor.paths:
+            for path in scan_config.paths:
                 self.log_info('✅ Monitor moved to target {} {}'.format(target, get_tag('path', path)))
     
-    def _get_all_paths_in_path(self, path):
-        return_paths = []
+    def _get_all_paths_in_path(self, path: str) -> List[str]:
+        return_paths: list[str] = []
 
         try:
             q = [path]
@@ -216,7 +224,7 @@ class AutoScan(ServiceBase):
             
         return return_paths
     
-    def _add_inotify_watch(self, i, path, scan_mask):
+    def _add_inotify_watch(self, i: adapters.Inotify, path: str, scan_mask: int):
         # Add the path and all sub-paths to the notify list
         new_paths = self._get_all_paths_in_path(path)
         
@@ -232,14 +240,14 @@ class AutoScan(ServiceBase):
         except Exception as e:
             self.log_error('_add_inotify_watch {} {}'.format(get_tag('path', current_path), get_tag('error', e)))
     
-    def _delete_inotify_watch(self, i, path):
+    def _delete_inotify_watch(self, i: adapters.Inotify, path: str):
         # inotify automatically deletes watches of deleted paths
         # cleanup our local path list when a path is deleted
         with self.watched_paths_lock:
             current_path = ''
             try:
                 if path in self.watched_paths:
-                    new_monitor_paths = []
+                    new_monitor_paths: list[str] = []
                     for watch_path in self.watched_paths:
                         current_path = watch_path
                         if watch_path.startswith(path) == True:
@@ -255,7 +263,6 @@ class AutoScan(ServiceBase):
         
     def _monitor(self):
         while self.stop_threads == False:
-            
             # Process any monitors currently in the system
             with self.monitor_lock:
                 if len(self.monitors) > 0:
@@ -272,7 +279,7 @@ class AutoScan(ServiceBase):
                         if current_monitor is not None:
                             # If servers were just notified for this name remove all monitors for the same name since
                             # the server refresh is by library not by item
-                            new_monitors = []
+                            new_monitors: list[ScanConfigInfo] = []
                             for monitor in self.monitors:
                                 if monitor.name != current_monitor.name:
                                     new_monitors.append(monitor)
@@ -283,7 +290,7 @@ class AutoScan(ServiceBase):
             # Check if any new paths need to be added to the inotify list
             with self.check_new_paths_lock:
                 if len(self.check_new_paths) > 0:
-                    new_path_list = []
+                    new_path_list: list[CheckPathData] = []
                     current_time = time.time()
                     for check_path in self.check_new_paths:
                         if (current_time - check_path.time) >= self.seconds_before_inotify_modify:
@@ -303,10 +310,10 @@ class AutoScan(ServiceBase):
         
         self.log_info('Stopping monitor thread')
     
-    def _log_scan_moved_to_monitor(self, name, path):
+    def _log_scan_moved_to_monitor(self, name: str, path: str):
         self.log_info('➡️ Scan moved to monitor {} {}'.format(get_tag('name', name), get_tag('path', path)))
         
-    def _add_file_monitor(self, path, scan):
+    def _add_file_monitor(self, path: str, scan: ScanConfigInfo):
         monitor_found = False
         current_time = time.time()
         
@@ -332,13 +339,13 @@ class AutoScan(ServiceBase):
         
         # No monitor found for this item add it to the monitor list
         if monitor_found == False:
-            monitor_info = ScanInfo(scan.name, scan.plex_library_valid, scan.plex_library, scan.emby_library_valid, scan.emby_library, scan.emby_library_id, scan.jellyfin_library_valid, scan.jellyfin_library, scan.jellyfin_library_id, current_time)
+            monitor_info = ScanConfigInfo(scan.name, scan.plex_library, scan.emby_library, scan.jellyfin_library, current_time)
             monitor_info.paths.append(path)
             with self.monitor_lock:
                 self.monitors.append(monitor_info)
             self._log_scan_moved_to_monitor(monitor_info.name, path)
         
-    def _monitor_path(self, scan):
+    def _monitor_path(self, scan: ScanConfigInfo):
         scanner_mask =  (constants.IN_MODIFY | constants.IN_MOVED_FROM | constants.IN_MOVED_TO | 
                         constants.IN_CREATE | constants.IN_DELETE)
         
@@ -371,7 +378,7 @@ class AutoScan(ServiceBase):
                 break
         
     def start(self):
-        for scan in self.scans:
+        for scan in self.scan_configs:
             thread = Thread(target=self._monitor_path, args=(scan,)).start()
             self.threads.append(thread)
         

@@ -2,7 +2,7 @@
 Autoscan
 """
 
-version = 'v1.0.0'
+version = 'v1.1.0'
 
 import sys
 import os
@@ -12,6 +12,7 @@ import colorlog
 import signal
 import time
 from sys import platform
+from typing import List
 from logging.handlers import RotatingFileHandler
 from apscheduler.schedulers.blocking import BlockingScheduler
 
@@ -23,6 +24,9 @@ from common.gotify_handler import GotifyHandler
 from common.plain_text_formatter import PlainTextFormatter
 from common.gotify_plain_text_formatter import GotifyPlainTextFormatter
 
+from common.utils import get_tag, get_formatted_emby, get_formatted_plex, get_formatted_jellyfin
+
+from service.ServiceBase import ServiceBase
 if platform == "linux":
     from service.AutoScan import AutoScan
 
@@ -31,16 +35,16 @@ logger = logging.getLogger(__name__)
 scheduler = BlockingScheduler()
 
 # Api
-plex_api = None
-emby_api = None
-jellyfin_api = None
+plex_api: PlexAPI = None
+emby_api: EmbyAPI = None
+jellyfin_api: JellyfinAPI = None
 
 # Available Services
-services = []
+services: list[ServiceBase] = []
 ##########################
 
 def handle_sigterm(signum, frame):
-    logger.info("SIGTERM received, shutting down ...")
+    logger.info('SIGTERM received, shutting down ...')
     for service in services:
         service.shutdown()
     scheduler.shutdown(wait=True)
@@ -49,7 +53,7 @@ def handle_sigterm(signum, frame):
 def do_nothing():
     time.sleep(1)
 
-conf_loc_path_file = ""
+conf_loc_path_file: str = ''
 config_file_valid = True
 if "CONFIG_PATH" in os.environ:
     conf_loc_path_file = os.environ['CONFIG_PATH'].rstrip('/')
@@ -106,24 +110,39 @@ if config_file_valid == True and os.path.exists(conf_loc_path_file) == True:
         if gotify_handler is not None:
             logger.addHandler(gotify_handler)
         
+        logger.info('Starting Autoscan {} *************************************'.format(version))
+        
         # Create all the api servers
         if 'plex_url' in data and 'plex_api_key' in data:
             plex_api = PlexAPI(data['plex_url'], data['plex_api_key'], logger)
+            if plex_api.get_valid() == False:
+                logger.warning('{} server not available. Is this correct {} {}'.format(get_formatted_plex(), get_tag('url', data['plex_url']), get_tag('api_key', data['plex_api_key'])))
+        elif 'plex_url' in data or 'plex_api_key' in data:
+            logger.warning('{} configuration error must define both plex_url and plex_api_key'.format(get_formatted_plex()))
+            
+        
         if 'emby_url' in data and 'emby_api_key' in data:
             emby_api = EmbyAPI(data['emby_url'], data['emby_api_key'], logger)
+            if emby_api.get_valid() == False:
+                logger.warning('{} server not available. Is this correct {} {}'.format(get_formatted_emby(), get_tag('url', data['emby_url']), get_tag('api_key', data['emby_api_key'])))
+        elif 'emby_url' in data or 'emby_api_key' in data:
+            logger.warning('{} configuration error must define both emby_url and emby_api_key'.format(get_formatted_emby()))
+                
         if 'jellyfin_url' in data and 'jellyfin_api_key' in data:
             jellyfin_api = JellyfinAPI(data['jellyfin_url'], data['jellyfin_api_key'], logger)
-        
-        logger.info('Starting Autoscan {} *************************************'.format(version))
+            if jellyfin_api.get_valid() == False:
+                logger.warning('{} server not available. Is this correct {} {}'.format(get_formatted_jellyfin(), get_tag('url', data['jellyfin_url']), get_tag('api_key', data['jellyfin_api_key'])))
+        elif 'jellyfin_url' in data or 'jellyfin_api_key' in data:
+            logger.warning('{} configuration error must define both jellyfin_url and jellyfin_api_key'.format(get_formatted_jellyfin()))
         
         # Create the services ####################################
         
-        # Create the Sync Watched Status Service
-        if platform == "linux":
+        # Create the AutoScan Service
+        if platform == 'linux':
             if 'auto_scan' in data:
                 services.append(AutoScan(plex_api, emby_api, jellyfin_api, data['auto_scan'], logger, scheduler))
             else:
-                logger.error('Configuration file problem no auto_scan section found!')
+                logger.error('Configuration file problem no auto_scan data found!')
         
         # ########################################################
         
