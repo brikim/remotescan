@@ -1,18 +1,22 @@
 
 import os
 import time
-from datetime import datetime
 import threading
 from threading import Thread
 from dataclasses import dataclass, field
 from logging import Logger
 from apscheduler.schedulers.blocking import BlockingScheduler
+
 from external.PyInotify.inotify import adapters, constants
-from typing import Any, List
+
+from typing import Any
+
 from api.plex import PlexAPI
 from api.emby import EmbyAPI
 from api.jellyfin import JellyfinAPI
+
 from service.ServiceBase import ServiceBase
+
 from common.utils import get_tag, get_formatted_emby, get_formatted_plex, get_formatted_jellyfin, build_target_string
 
 @dataclass
@@ -23,14 +27,6 @@ class ScanConfigInfo:
     jellyfin_library: str
     time: float
     paths: list[str] = field(default_factory=list)
-
-@dataclass
-class CheckPathData:
-    path: str
-    i: adapters.Inotify
-    scan_mask: int
-    time: float
-    deleted: bool
 
 class AutoScan(ServiceBase):
     def __init__(self, plex_api: PlexAPI, emby_api: EmbyAPI, jellyfin_api: JellyfinAPI, config: Any, logger: Logger, scheduler: BlockingScheduler):
@@ -55,14 +51,8 @@ class AutoScan(ServiceBase):
         self.monitor_lock = threading.Lock()
         self.monitor_thread: Thread = None
         
-        self.watched_paths_lock = threading.Lock()
-        self.watched_paths: list[str] = []
-        
         self.threads: list[Thread] = []
         self.stop_threads = False
-        
-        self.check_new_paths_lock = threading.Lock()
-        self.check_new_paths: list[CheckPathData] = []
         
         try:
             if 'seconds_monitor_rate' in config:
@@ -200,66 +190,6 @@ class AutoScan(ServiceBase):
         if target != '':
             for path in scan_config.paths:
                 self.log_info('✅ Monitor moved to target {} {}'.format(target, get_tag('path', path)))
-    
-    def _get_all_paths_in_path(self, path: str) -> List[str]:
-        return_paths: list[str] = []
-
-        try:
-            q = [path]
-            while q:
-                current_path = q[0]
-                del q[0]
-
-                return_paths.append(current_path)
-
-                for filename in os.listdir(current_path):
-                    entry_filepath = os.path.join(current_path, filename)
-                    if os.path.isdir(entry_filepath) is False:
-                        continue
-
-                    q.append(entry_filepath)
-        
-        except Exception as e:
-            self.log_error('_get_all_paths_in_path {}'.format(get_tag('error', e)))
-            
-        return return_paths
-    
-    def _add_inotify_watch(self, i: adapters.Inotify, path: str, scan_mask: int):
-        # Add the path and all sub-paths to the notify list
-        new_paths = self._get_all_paths_in_path(path)
-        
-        try:
-            current_path = ''
-            with self.watched_paths_lock:
-                for new_path in new_paths:
-                    new_path_in_watched = new_path in self.watched_paths
-                    if new_path_in_watched == False:
-                        current_path = new_path
-                        i.add_watch(new_path, scan_mask)
-                        self.watched_paths.append(new_path)
-        except Exception as e:
-            self.log_error('_add_inotify_watch {} {}'.format(get_tag('path', current_path), get_tag('error', e)))
-    
-    def _delete_inotify_watch(self, i: adapters.Inotify, path: str):
-        # inotify automatically deletes watches of deleted paths
-        # cleanup our local path list when a path is deleted
-        with self.watched_paths_lock:
-            current_path = ''
-            try:
-                if path in self.watched_paths:
-                    new_monitor_paths: list[str] = []
-                    for watch_path in self.watched_paths:
-                        current_path = watch_path
-                        if watch_path.startswith(path) == True:
-                            wd = i.get_watch_id(watch_path)
-                            if wd is not None and wd >= 0:
-                                i.remove_watch(watch_path, True)
-                        else:
-                            new_monitor_paths.append(watch_path)
-
-                    self.watched_paths = new_monitor_paths
-            except Exception as e:
-                self.log_warning('_delete_inotify_watch {} {}'.format(get_tag('path', current_path), get_tag('error', e)))
         
     def _monitor(self):
         while self.stop_threads == False:
@@ -286,25 +216,6 @@ class AutoScan(ServiceBase):
 
                             self._notify_media_servers(current_monitor)
                             self.monitors = new_monitors
-            
-            # Check if any new paths need to be added to the inotify list
-            with self.check_new_paths_lock:
-                if len(self.check_new_paths) > 0:
-                    new_path_list: list[CheckPathData] = []
-                    current_time = time.time()
-                    for check_path in self.check_new_paths:
-                        if (current_time - check_path.time) >= self.seconds_before_inotify_modify:
-                            if check_path.deleted == True:
-                                self._delete_inotify_watch(check_path.i, check_path.path)
-                            else:
-                                # Make sure the path still exists before continue
-                                if os.path.isdir(check_path.path) == True:
-                                    self._add_inotify_watch(check_path.i, check_path.path, check_path.scan_mask)
-                        else:
-                            new_path_list.append(check_path)
-                
-                        # Set the check new paths to the new list
-                        self.check_new_paths = new_path_list
                 
             time.sleep(self.seconds_monitor_rate)
         
@@ -350,27 +261,16 @@ class AutoScan(ServiceBase):
                         constants.IN_CREATE | constants.IN_DELETE)
         
         # Setup the inotify watches for the current folder and all sub-folders
-        i = adapters.Inotify(self.logger)
-            
         for scan_path in scan.paths:
             self.log_info('Starting monitor {} {}'.format(get_tag('name', scan.name), get_tag('path', scan_path)))
-            self._add_inotify_watch(i, scan_path, scanner_mask)
+        i = adapters.InotifyTrees(logger=self.logger, paths=scan.paths, mask=scanner_mask)
             
         for event in i.event_gen(yield_nones=False):
             (_, type_names, path, filename) = event
             if filename != '':
-                # Make sure this is valid path to monitor
-                if self._get_scan_path_valid(path) == True:
-                    # New path check. This will add or delete scans if folders are added or removed
-                    if 'IN_ISDIR' in type_names:
-                        is_delete = 'IN_DELETE' in type_names or 'IN_MOVED_FROM' in type_names
-                        if 'IN_CREATE' in type_names or 'IN_MOVED_TO' in type_names or is_delete == True:
-                            with self.check_new_paths_lock:
-                                self.check_new_paths.append(CheckPathData('{}/{}'.format(path, filename), i, scanner_mask, time.time(), is_delete))
-                
-                    # If the extension is valid add the file monitor
-                    if self._get_scan_extension_valid(filename) == True:
-                        self._add_file_monitor(path, scan)
+                # Make sure this is valid path to monitor and the extension is valid add the file monitor
+                if self._get_scan_path_valid(path) == True and self._get_scan_extension_valid(filename) == True:
+                    self._add_file_monitor(path, scan)
             
             if self.stop_threads == True:
                 for scan_path in scan.paths:

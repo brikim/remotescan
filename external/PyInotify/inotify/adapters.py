@@ -6,6 +6,7 @@ import collections
 import time
 
 from errno import EINTR
+from typing import List
 
 import external.PyInotify.inotify.constants
 import external.PyInotify.inotify.calls
@@ -77,6 +78,9 @@ class Inotify(object):
         self.__logger.debug("Cleaning-up external.PyInotify.inotify.")
         os.close(self.__inotify_fd)
 
+    def _get_watches(self):
+        return self.__watches
+    
     def get_watch_id(self, path_unicode):
         return self.__watches.get(path_unicode)
         
@@ -120,7 +124,7 @@ class Inotify(object):
         del self.__watches[path]
 
         self.remove_watch_with_id(wd, superficial)
-
+    
     def remove_watch_with_id(self, wd, superficial=False):
         del self.__watches_r[wd]
 
@@ -129,6 +133,16 @@ class Inotify(object):
 
             external.PyInotify.inotify.calls.inotify_rm_watch(self.__inotify_fd, wd)
 
+    def remove_watch_and_sub_watches(self, path):
+        watch_found = True
+        while watch_found == True:
+            watch_found = False
+            for watch_path in self.__watches:
+                if watch_path.startswith(path) == True:
+                    self.remove_watch(watch_path, True)
+                    watch_found = True
+                    break
+    
     def _get_event_names(self, event_type):
         names = []
         for bit, name in external.PyInotify.inotify.constants.MASK_LOOKUP.items():
@@ -260,9 +274,10 @@ class Inotify(object):
 
 
 class _BaseTree(object):
-    def __init__(self, mask=external.PyInotify.inotify.constants.IN_ALL_EVENTS,
+    def __init__(self, logger, mask=external.PyInotify.inotify.constants.IN_ALL_EVENTS,
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-
+        self.logger = logger
+        
         # No matter what we actually received as the mask, make sure we have
         # the minimum that we require to curate our list of watches.
         self._mask = mask | \
@@ -270,8 +285,17 @@ class _BaseTree(object):
                         external.PyInotify.inotify.constants.IN_CREATE | \
                         external.PyInotify.inotify.constants.IN_DELETE
 
-        self._i = Inotify(block_duration_s=block_duration_s)
+        self._i = Inotify(logger, block_duration_s=block_duration_s)
 
+    def _add_watch_and_sub_watches(self, path: str):
+        self._i.add_watch(path, self._mask)
+        for filename in os.listdir(path):
+            entry_filepath = os.path.join(path, filename)
+            if os.path.isdir(entry_filepath) == False:
+                continue
+            
+            self._i.add_watch(entry_filepath, self._mask)
+        
     def event_gen(self, ignore_missing_new_folders=False, **kwargs):
         """This is a secondary generator that wraps the principal one, and
         adds/removes watches as directories are added/removed.
@@ -296,34 +320,33 @@ class _BaseTree(object):
                         os.path.exists(full_path) is True or
                         ignore_missing_new_folders is False
                        ):
-                        self.__logger.debug("A directory has been created. We're "
+                        self.logger.debug("A directory has been created. We're "
                                       "adding a watch on it (because we're "
                                       "being recursive): [%s]", full_path)
 
-
-                        self._i.add_watch(full_path, self._mask)
+                        self._add_watch_and_sub_watches(full_path)
 
                     if header.mask & external.PyInotify.inotify.constants.IN_DELETE:
-                        self.__logger.debug("A directory has been removed. We're "
+                        self.logger.debug("A directory has been removed. We're "
                                       "being recursive, but it would have "
                                       "automatically been deregistered: [%s]",
                                       full_path)
 
                         # The watch would've already been cleaned-up internally.
-                        self._i.remove_watch(full_path, superficial=True)
+                        self._i.remove_watch_and_sub_watches(full_path)
                     elif header.mask & external.PyInotify.inotify.constants.IN_MOVED_FROM:
-                        self.__logger.debug("A directory has been renamed. We're "
+                        self.logger.debug("A directory has been renamed. We're "
                                       "being recursive, but it would have "
                                       "automatically been deregistered: [%s]",
                                       full_path)
 
-                        self._i.remove_watch(full_path, superficial=True)
+                        self._i.remove_watch_and_sub_watches(full_path)
                     elif header.mask & external.PyInotify.inotify.constants.IN_MOVED_TO:
-                        self.__logger.debug("A directory has been renamed. We're "
+                        self.logger.debug("A directory has been renamed. We're "
                                       "adding a watch on it (because we're "
                                       "being recursive): [%s]", full_path)
 
-                        self._i.add_watch(full_path, self._mask)
+                        self._add_watch_and_sub_watches(full_path)
 
             yield event
 
@@ -335,16 +358,16 @@ class _BaseTree(object):
 class InotifyTree(_BaseTree):
     """Recursively watch a path."""
 
-    def __init__(self, path, mask=external.PyInotify.inotify.constants.IN_ALL_EVENTS,
+    def __init__(self, logger, path, mask=external.PyInotify.inotify.constants.IN_ALL_EVENTS,
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
+        super(InotifyTree, self).__init__(logger=logger, mask=mask, block_duration_s=block_duration_s)
 
         self.__root_path = path
 
         self.__load_tree(path)
 
     def __load_tree(self, path):
-        self.__logger.debug("Adding initial watches on tree: [%s]", path)
+        self.logger.debug("Adding initial watches on tree: [%s]", path)
 
         paths = []
 
@@ -369,14 +392,14 @@ class InotifyTree(_BaseTree):
 class InotifyTrees(_BaseTree):
     """Recursively watch over a list of trees."""
 
-    def __init__(self, paths, mask=external.PyInotify.inotify.constants.IN_ALL_EVENTS,
+    def __init__(self, logger, paths, mask=external.PyInotify.inotify.constants.IN_ALL_EVENTS,
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-        super(InotifyTrees, self).__init__(mask=mask, block_duration_s=block_duration_s)
+        super(InotifyTrees, self).__init__(logger=logger, mask=mask, block_duration_s=block_duration_s)
 
         self.__load_trees(paths)
 
     def __load_trees(self, paths):
-        self.__logger.debug("Adding initial watches on trees: [%s]", ",".join(map(str, paths)))
+        self.logger.debug("Adding initial watches on trees: [%s]", ",".join(map(str, paths)))
 
         found = []
 

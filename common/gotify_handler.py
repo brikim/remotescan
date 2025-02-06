@@ -3,7 +3,7 @@ import requests
 import logging
 
 class GotifyHandler(logging.Handler):
-    def __init__(self, url, app_token, title, priority):
+    def __init__(self, url: str, app_token: str, title: str, priority):
         self.url = url.rstrip('/')
         self.app_token = app_token
         self.title = title
