@@ -3,8 +3,8 @@ name: Build and push Docker image to dockerhub
 on:
   push:
     branches: [ "main" ]
-  tags:
-    - v**
+    tags: 
+        - v**
 
 env:
   REGISTRY: ghcr.io
