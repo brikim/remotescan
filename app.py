@@ -2,7 +2,7 @@
 Autoscan
 """
 
-version = 'v1.2.0'
+version = 'v1.2.1'
 
 import sys
 import os
