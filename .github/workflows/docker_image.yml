@@ -5,9 +5,12 @@ on:
     branches: [ "main" ]
   tags:
     - 'v*'
-    
-jobs:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
   build:
     runs-on: ubuntu-latest
     steps:
@@ -21,10 +24,10 @@ jobs:
          password: ${{ secrets.DOCKERHUB_TOKEN }}
       
       - name: Extract Docker metadata
-          id: meta
-          uses: docker/metadata-action@v2
-          with:
-            images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        id: meta
+        uses: docker/metadata-action@v2
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       
       - name: Build and Push Versioned Docker Image
         id: build-and-push
