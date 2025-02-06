@@ -1,8 +1,9 @@
 # Autoscan
+Autoscan replaces the default Plex, Emby and Jellyfin scan my library automatically function. The Autoscan docker container should be run on the PC where your media is stored. It will then be configured to notify your media server of any changes(New, Modify and Delete)
+> [!NOTE]
+> 📝 The scan for new media function of your media server will not work over network shares(NFS or SAMBA).
 
 Uses iNotify to process file changes and notify Plex, Emby and/or Jellyfin.
-This replaces the default Plex, Emby and Jellyfin scan my library automatically function.
-This should be used if your media is stored on a different PC (a NAS) than your media server.
 
 Autoscan uses python to monitor defined folders, add new folders to monitor and remove deleted folders from monitor. Once a change is detected monitors will wait for a defined time before requesting the media server to scan for changes. This is done so that multiple new files being added do not flood the media server with scan requests.
 
@@ -26,9 +27,11 @@ services:
     volumes:
       - /docker/autoscan/config:/config:ro
       - /docker/autoscan/logs:/logs
-      - /pathToMedia:/media:ro
+      - /pathToMedia:/media
     restart: unless-stopped
 ```
+> [!NOTE]
+> 📝 /media folder can not be read only for the docker container to shut down nicely
 
 ### Environment Variables
 | Env | Function |
