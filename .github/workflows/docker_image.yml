@@ -7,7 +7,7 @@ on:
         - v**
 
 env:
-  REGISTRY: brikim
+  REGISTRY:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
