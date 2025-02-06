@@ -108,9 +108,6 @@ class AutoScan(ServiceBase):
             
         # allow time for the events
         time.sleep(1)
-        
-        with self.monitor_lock:
-            self.monitors.clear()
                             
         # clean up the temp files
         for scan in self.scan_configs:
@@ -118,6 +115,9 @@ class AutoScan(ServiceBase):
                 temp_file = path + temp_file_path
                 os.remove(temp_file)
                 break
+        
+        with self.monitor_lock:
+            self.monitors.clear()
         
         self.log_info('Successful shutdown')
     
@@ -260,22 +260,26 @@ class AutoScan(ServiceBase):
         scanner_mask =  (constants.IN_MODIFY | constants.IN_MOVED_FROM | constants.IN_MOVED_TO | 
                         constants.IN_CREATE | constants.IN_DELETE)
         
-        # Setup the inotify watches for the current folder and all sub-folders
+        # Make a copy of the paths to send to inotify since these will get deleted
+        inotify_paths: list[str] = []
         for scan_path in scan.paths:
             self.log_info('Starting monitor {} {}'.format(get_tag('name', scan.name), get_tag('path', scan_path)))
-        i = adapters.InotifyTrees(logger=self.logger, paths=scan.paths, mask=scanner_mask)
+            inotify_paths.append(scan_path)
+        
+        # Setup the inotify watches for the current folder and all sub-folders
+        i = adapters.InotifyTrees(logger=self.logger, paths=inotify_paths, mask=scanner_mask)
             
         for event in i.event_gen(yield_nones=False):
+            if self.stop_threads == True:
+                for scan_path in scan.paths:
+                    self.log_info('Stopping watch {} {}'.format(get_tag('name', scan.name), get_tag('path', scan_path)))
+                break
+            
             (_, type_names, path, filename) = event
             if filename != '':
                 # Make sure this is valid path to monitor and the extension is valid add the file monitor
                 if self._get_scan_path_valid(path) == True and self._get_scan_extension_valid(filename) == True:
                     self._add_file_monitor(path, scan)
-            
-            if self.stop_threads == True:
-                for scan_path in scan.paths:
-                    self.log_info('Stopping watch {} {}'.format(get_tag('name', scan.name), get_tag('path', scan_path)))
-                break
         
     def start(self):
         for scan in self.scan_configs:
