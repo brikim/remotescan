@@ -7,7 +7,7 @@ class ServiceBase:
         self.logger = logger
         self.scheduler = scheduler
     
-    def _log_msg(self, type: str, message: str):
+    def __log_msg(self, type: str, message: str):
         if type == 'warning':
             self.logger.warning(message)
         elif type == 'error':
@@ -15,20 +15,14 @@ class ServiceBase:
         else:
             self.logger.info(message)
 
-    def log_info(self, message: str):
-        self._log_msg('info', message)
-    
-    def log_info(self, message: str):
-        self._log_msg('info', message)
+    def _log_info(self, message: str):
+        self.__log_msg('info', message)
         
-    def log_warning(self, message: str):
-        self._log_msg('warning', message)
+    def _log_warning(self, message: str):
+        self.__log_msg('warning', message)
         
-    def log_error(self, message: str):
-        self._log_msg('error', message)
-    
-    def log_service_enabled(self):
-        self.log_info('Enabled')
+    def _log_error(self, message: str):
+        self.__log_msg('error', message)
         
     def init_scheduler_jobs(self):
         pass
