@@ -1,32 +1,32 @@
-# Autoscan
-Autoscan replaces the default Plex, Emby and Jellyfin scan my library automatically function. The Autoscan docker container should be run on the PC where your media is stored. It will then be configured to notify your media server of any changes(New, Modify and Delete)
+# Remotescan
+Remotescan replaces the default Plex, Emby and Jellyfin scan my library automatically function. The Remotescan docker container should be run on the PC where your media is stored. It will then be configured to notify your media server of any changes(New, Modify and Delete)
 > [!NOTE]
 > 📝 The scan for new media function of your media server will not work over network shares(NFS or SAMBA).
 
 Uses iNotify to process file changes and notify Plex, Emby and/or Jellyfin.
 
-Autoscan uses python to monitor defined folders, add new folders to monitor and remove deleted folders from monitor. Once a change is detected monitors will wait for a defined time before requesting the media server to scan for changes. This is done so that multiple new files being added do not flood the media server with scan requests.
+Remotescan uses python to monitor defined folders, add new folders to monitor and remove deleted folders from monitor. Once a change is detected monitors will wait for a defined time before requesting the media server to scan for changes. This is done so that multiple new files being added do not flood the media server with scan requests.
 
-## Installing Autoscan
-Autoscan offers a pre-compiled [docker image](https://hub.docker.com/repository/docker/brikim/autoscan/general)
+## Installing Remotescan
+Remotescan offers a pre-compiled [docker image](https://hub.docker.com/repository/docker/brikim/remotescan/general)
 
 ### Usage
-Use docker compose to run Autoscan
+Use docker compose to run Remotescan
 
 ### compose.yml
 ```yaml
 ---
 services:
-  autoscan:
-    container_name: autoscan
-    image: brikim/autoscan:latest
+  remotescan:
+    container_name: remotescan
+    image: brikim/remotescan:latest
     security_opt:
       - no-new-privileges:true
     environment:
       - TZ=Etc/UTC
     volumes:
-      - /docker/autoscan/config:/config:ro
-      - /docker/autoscan/logs:/logs
+      - /docker/remotescan/config:/config:ro
+      - /docker/remotescan/logs:/logs
       - /pathToMedia:/media
     restart: unless-stopped
 ```
@@ -41,12 +41,12 @@ services:
 ### Volume Mappings
 | Volume | Function |
 | :------- | :------------------------ |
-| /config  | Path to a folder containing config.yml used to setup Autoscan |
-| /logs    | Path to a folder to store Autoscan log files |
+| /config  | Path to a folder containing config.yml used to setup Remotescan |
+| /logs    | Path to a folder to store Remotescan log files |
 | /media   | Path to your media files. Used to scan directories for changes |
 
 ### Configuration File
-A configuration file is required to use Autoscan. Create a config.yml file in the volume mapped to /config
+A configuration file is required to use Remotescan. Create a config.yml file in the volume mapped to /config
 
 #### config.yml
 ```yaml
@@ -123,9 +123,9 @@ Not required unless wanting to send Warnings or Errors to Gotify
 | message_title    | Title to put in the title bar of the message |
 | priority         | The priority of the message to send to gotify |
 
-#### Autoscan configuration
+#### Remotescan configuration
 
-| Autoscan | Function |
+| Remotescan | Function |
 | :--------------- | :------------------------ |
 | seconds_before_notify    | How long to wait after changes detected before sending scan request to media servers. Not required. Default: 90 |
 | seconds_between_notifies | How many seconds to wait between media server scan requests. Not required. Default: 15 |
