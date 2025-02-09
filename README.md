@@ -68,7 +68,7 @@ A configuration file is required to use Remotescan. Create a config.yml file in 
         "priority": 6
     },
     
-    "auto_scan": {
+    "remote_scan": {
         "seconds_before_notify": 90,
         "seconds_between_notifies": 15,
         

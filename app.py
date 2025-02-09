@@ -2,7 +2,7 @@
 Remotescan
 """
 
-version = 'v1.5.0'
+version = 'v1.5.1'
 
 import sys
 import os
@@ -12,7 +12,6 @@ import colorlog
 import signal
 import time
 from sys import platform
-from typing import List
 from logging.handlers import RotatingFileHandler
 from apscheduler.schedulers.blocking import BlockingScheduler
 
@@ -141,10 +140,10 @@ if config_file_valid is True and os.path.exists(conf_loc_path_file) is True:
         
         # Create the Remotescan Service
         if platform == 'linux':
-            if 'auto_scan' in data:
-                services.append(Remotescan(plex_api, emby_api, jellyfin_api, data['auto_scan'], logger, scheduler))
+            if 'remote_scan' in data:
+                services.append(Remotescan(plex_api, emby_api, jellyfin_api, data['remote_scan'], logger, scheduler))
             else:
-                logger.error('Configuration file problem no auto_scan data found!')
+                logger.error('Configuration file problem no remote_scan data found!')
         
         # ########################################################
         
