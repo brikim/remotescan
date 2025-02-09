@@ -2,7 +2,7 @@
 Remotescan
 """
 
-version = 'v1.5.1'
+version = 'v1.5.2'
 
 import sys
 import os

@@ -7,7 +7,7 @@ from threading import Thread
 from dataclasses import dataclass, field
 from logging import Logger
 from apscheduler.schedulers.blocking import BlockingScheduler
-from external.PyInotify import inotify
+from external.PyInotify.inotify import adapters, constants
 from typing import Any
 
 from api.plex import PlexAPI
@@ -15,6 +15,7 @@ from api.emby import EmbyAPI
 from api.jellyfin import JellyfinAPI
 
 from service.ServiceBase import ServiceBase
+
 from common import utils
 
 @dataclass
@@ -227,8 +228,8 @@ class Remotescan(ServiceBase):
             self.__log_scan_moved_to_monitor(monitor_info.name, path)
         
     def __monitor_path(self, scan_config: ScanConfigInfo):
-        scanner_mask =  (inotify.constants.IN_MODIFY | inotify.constants.IN_MOVED_FROM | inotify.constants.IN_MOVED_TO | 
-                        inotify.constants.IN_CREATE | inotify.constants.IN_DELETE)
+        scanner_mask =  (constants.IN_MODIFY | constants.IN_MOVED_FROM | constants.IN_MOVED_TO | 
+                        constants.IN_CREATE | constants.IN_DELETE)
         
         # Make a copy of the paths to send to inotify since these will get deleted
         inotify_paths: list[str] = []
@@ -237,7 +238,7 @@ class Remotescan(ServiceBase):
             inotify_paths.append(scan_path)
         
         # Setup the inotify watches for the current folder and all sub-folders
-        i = inotify.adapters.InotifyTrees(logger=self.logger, paths=inotify_paths, mask=scanner_mask)
+        i = adapters.InotifyTrees(logger=self.logger, paths=inotify_paths, mask=scanner_mask)
             
         for event in i.event_gen(yield_nones=False):
             if self.stop_threads is True:
