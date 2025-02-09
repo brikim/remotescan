@@ -1,14 +1,14 @@
 ---
 services:
-  autoscan:
-    image: autoscan:latest
-    container_name: autoscan
+  remotescan:
+    image: brikim/remotescan:latest
+    container_name: remotescan
     security_opt:
       - no-new-privileges:true
     environment:
       - TZ=America/Chicago
     volumes:
-      - /docker/autoscan/config:/config
-      - /docker/autoscan/logs:/logs
+      - /docker/remotescan/config:/config
+      - /docker/remotescan/logs:/logs
       - /pathToMedia:/media
     restart: unless-stopped

@@ -27,7 +27,7 @@ class ScanConfigInfo:
     time: float
     paths: list[str] = field(default_factory=list)
 
-class AutoScan(ServiceBase):
+class Remotescan(ServiceBase):
     def __init__(self, plex_api: PlexAPI, emby_api: EmbyAPI, jellyfin_api: JellyfinAPI, config: Any, logger: Logger, scheduler: BlockingScheduler):
         super().__init__(logger, scheduler)
         

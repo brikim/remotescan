@@ -1,5 +1,5 @@
 """
-Autoscan
+Remotescan
 """
 
 version = 'v1.3.1'
@@ -28,7 +28,7 @@ from common import utils
 
 from service.ServiceBase import ServiceBase
 if platform == "linux":
-    from service.AutoScan import AutoScan
+    from service.Remotescan import Remotescan
 
 # Global Variables #######
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ if config_file_valid is True and os.path.exists(conf_loc_path_file) is True:
         formatter = PlainTextFormatter()
         
         # Create a file handler to write logs to a file
-        rotating_handler = RotatingFileHandler('/logs/autoscan.log', maxBytes=50000, backupCount=5)
+        rotating_handler = RotatingFileHandler('/logs/remotescan.log', maxBytes=50000, backupCount=5)
         rotating_handler.setLevel(logging.INFO)
         rotating_handler.setFormatter(formatter)
 
@@ -112,7 +112,7 @@ if config_file_valid is True and os.path.exists(conf_loc_path_file) is True:
         if gotify_handler is not None:
             logger.addHandler(gotify_handler)
         
-        logger.info('Starting Autoscan {} *************************************'.format(version))
+        logger.info('Starting Remotescan {} *************************************'.format(version))
         
         # Create all the api servers
         if 'plex_url' in data and 'plex_api_key' in data:
@@ -139,10 +139,10 @@ if config_file_valid is True and os.path.exists(conf_loc_path_file) is True:
         
         # Create the services ####################################
         
-        # Create the AutoScan Service
+        # Create the Remotescan Service
         if platform == 'linux':
             if 'auto_scan' in data:
-                services.append(AutoScan(plex_api, emby_api, jellyfin_api, data['auto_scan'], logger, scheduler))
+                services.append(Remotescan(plex_api, emby_api, jellyfin_api, data['auto_scan'], logger, scheduler))
             else:
                 logger.error('Configuration file problem no auto_scan data found!')
         
@@ -161,7 +161,7 @@ if config_file_valid is True and os.path.exists(conf_loc_path_file) is True:
             scheduler.start()
         
     except Exception as e:
-        logger.error("Error starting Autoscan: {}".format(e))
+        logger.error("Error starting Remotescan: {}".format(e))
 else:
     sys.stderr.write("Error opening config file {}\n".format(conf_loc_path_file))
 
