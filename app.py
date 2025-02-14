@@ -2,7 +2,7 @@
 Remotescan
 """
 
-version = 'v1.5.2'
+version = 'v1.5.3'
 
 import sys
 import os
@@ -116,7 +116,9 @@ if config_file_valid is True and os.path.exists(conf_loc_path_file) is True:
         # Create all the api servers
         if 'plex_url' in data and 'plex_api_key' in data:
             plex_api = PlexAPI(data['plex_url'], data['plex_api_key'], logger)
-            if plex_api.get_valid() is False:
+            if plex_api.get_valid() is True:
+                logger.info('Connected to {}:{} successfully'.format(utils.get_formatted_plex(), plex_api.get_name()))
+            else:
                 logger.warning('{} server not available. Is this correct {} {}'.format(utils.get_formatted_plex(), utils.get_tag('url', data['plex_url']), utils.get_tag('api_key', data['plex_api_key'])))
         elif 'plex_url' in data or 'plex_api_key' in data:
             logger.warning('{} configuration error must define both plex_url and plex_api_key'.format(utils.get_formatted_plex()))
@@ -124,14 +126,18 @@ if config_file_valid is True and os.path.exists(conf_loc_path_file) is True:
         
         if 'emby_url' in data and 'emby_api_key' in data:
             emby_api = EmbyAPI(data['emby_url'], data['emby_api_key'], logger)
-            if emby_api.get_valid() is False:
+            if emby_api.get_valid() is True:
+                logger.info('Connected to {}:{} successfully'.format(utils.get_formatted_emby(), emby_api.get_name()))
+            else:
                 logger.warning('{} server not available. Is this correct {} {}'.format(utils.get_formatted_emby(), utils.get_tag('url', data['emby_url']), utils.get_tag('api_key', data['emby_api_key'])))
         elif 'emby_url' in data or 'emby_api_key' in data:
             logger.warning('{} configuration error must define both emby_url and emby_api_key'.format(utils.get_formatted_emby()))
                 
         if 'jellyfin_url' in data and 'jellyfin_api_key' in data:
             jellyfin_api = JellyfinAPI(data['jellyfin_url'], data['jellyfin_api_key'], logger)
-            if jellyfin_api.get_valid() is False:
+            if jellyfin_api.get_valid() is True:
+                logger.info('Connected to {}:{} successfully'.format(utils.get_formatted_jellyfin(), jellyfin_api.get_name()))
+            else:
                 logger.warning('{} server not available. Is this correct {} {}'.format(utils.get_formatted_jellyfin(), utils.get_tag('url', data['jellyfin_url']), utils.get_tag('api_key', data['jellyfin_api_key'])))
         elif 'jellyfin_url' in data or 'jellyfin_api_key' in data:
             logger.warning('{} configuration error must define both jellyfin_url and jellyfin_api_key'.format(utils.get_formatted_jellyfin()))

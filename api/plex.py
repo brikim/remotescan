@@ -1,14 +1,15 @@
 from logging import Logger
 from typing import Any
 from plexapi.server import PlexServer
-from common.utils import get_plex_ansi_code, get_log_header, get_tag
+from common import utils
 
-class PlexAPI:
+from api.api_base import ApiBase
+
+class PlexAPI(ApiBase):
     def __init__(self, url: str, api_key: str, logger: Logger):
+        super().__init__(url, api_key, utils.get_plex_ansi_code(), self.__module__, logger)
         self.plex_server = PlexServer(url.rstrip('/'), api_key)
-        self.logger = logger
         self.item_invalid_type = None
-        self.log_header = get_log_header(get_plex_ansi_code(), self.__module__)
         
     def get_valid(self) -> bool:
         try:
@@ -18,6 +19,9 @@ class PlexAPI:
             pass
         return False
     
+    def get_name(self) -> str:
+        return self.plex_server.friendlyName
+        
     def get_invalid_type(self) -> Any:
         return self.item_invalid_type
     
@@ -25,7 +29,7 @@ class PlexAPI:
         try:
             return self.plex_server.library.section(library_name)
         except Exception as e:
-            pass
+            self.logger.error("{} get_library {} {}".format(self.log_header, utils.get_tag('library', library_name), utils.get_tag('error', e)))
         return self.get_invalid_type()
     
     def set_library_scan(self, library_name: str):
@@ -33,4 +37,4 @@ class PlexAPI:
             library = self.plex_server.library.section(library_name)
             library.update()
         except Exception as e:
-            self.logger.error("{} set_library_scan {} {}".format(self.log_header, get_tag('library', library_name), get_tag('error', e)))
+            self.logger.error("{} set_library_scan {} {}".format(self.log_header, utils.get_tag('library', library_name), utils.get_tag('error', e)))
