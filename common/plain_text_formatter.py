@@ -6,7 +6,7 @@ from common.utils import remove_ansi_code_from_text
 class PlainTextFormatter(logging.Formatter):
     def format(self, record):
         date_time = datetime.fromtimestamp(record.created)
-        date_string = date_time.strftime('%Y-%m-%d %H:%M:%S')
+        date_string = date_time.strftime("%Y-%m-%d %H:%M:%S")
         plain_text = remove_ansi_code_from_text(record.msg)
         
-        return '{} - {} - {}'.format(date_string, record.levelname, plain_text)
+        return f"{date_string} - {record.levelname} - {plain_text}"
