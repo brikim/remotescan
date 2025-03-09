@@ -6,7 +6,7 @@ ansi_end_code: str = "m"
 ansi_code_log = f"{ansi_start_code}15{ansi_end_code}"
 ansi_code_tag = f"{ansi_start_code}37{ansi_end_code}"
 ansi_code_plex = f"{ansi_start_code}220{ansi_end_code}"
-ansi_code_emby = f"{ansi_start_code}82{ansi_end_code}"
+ansi_code_emby = f"{ansi_start_code}70{ansi_end_code}"
 ansi_code_jellyfin = f"{ansi_start_code}63{ansi_end_code}"
 
 def get_log_ansi_code() -> str:
