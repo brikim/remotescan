@@ -10,6 +10,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from external.PyInotify.inotify import adapters, constants
 from typing import Any
 
+from api.api_manager import ApiManager
 from api.plex import PlexAPI
 from api.emby import EmbyAPI
 from api.jellyfin import JellyfinAPI
@@ -30,18 +31,16 @@ class ScanConfigInfo:
 class Remotescan(ServiceBase):
     def __init__(
         self,
-        plex_api: PlexAPI,
-        emby_api: EmbyAPI,
-        jellyfin_api: JellyfinAPI,
-        config: Any,
+        api_manager: ApiManager,
+        config: dict,
         logger: Logger,
         scheduler: BlockingScheduler
     ):
         super().__init__(logger, scheduler)
         
-        self.plex_api = plex_api
-        self.emby_api = emby_api
-        self.jellyfin_api = jellyfin_api
+        self.plex_api = api_manager.get_plex_api()
+        self.emby_api = api_manager.get_emby_api()
+        self.jellyfin_api = api_manager.get_jellyfin_api()
         
         self.ignore_folder_with_name: list[str] = []
         self.valid_file_extensions: list[str] = []
@@ -237,7 +236,7 @@ class Remotescan(ServiceBase):
                                 break
                             
                         # A monitor was finished and servers notified remove it from the list
-                        if current_monitor:
+                        if current_monitor is not None:
                             # If servers were just notified for this name remove all monitors for the same name since
                             # the server refresh is by library not by item
                             new_monitors: list[ScanConfigInfo] = []
@@ -253,10 +252,8 @@ class Remotescan(ServiceBase):
         self._log_info("Stopping monitor thread")
     
     def __log_scan_moved_to_monitor(self, name: str, path: str):
-        tag_name = utils.get_tag("name", name)
-        tag_path = utils.get_tag("path", path)
         self._log_info(
-            f"➡️ Scan moved to monitor {tag_name} {tag_path}"
+            f"➡️ Scan moved to monitor {utils.get_tag("name", name)} {utils.get_tag("path", path)}"
         )
         
     def __add_file_monitor(
@@ -314,10 +311,8 @@ class Remotescan(ServiceBase):
         # Make a copy of the paths to send to inotify since these will get deleted
         inotify_paths: list[str] = []
         for scan_path in scan_config.paths:
-            tag_name = utils.get_tag("name", scan_config.name)
-            tag_path = utils.get_tag("path", scan_path)
             self._log_info(
-                f"Starting monitor {tag_name} {tag_path}"
+                f"Starting monitor {utils.get_tag("name", scan_config.name)} {utils.get_tag("path", scan_path)}"
             )
             inotify_paths.append(scan_path)
         
@@ -331,10 +326,8 @@ class Remotescan(ServiceBase):
         for event in i.event_gen(yield_nones=False):
             if self.stop_threads:
                 for scan_path in scan_config.paths:
-                    tag_name = utils.get_tag("name", scan_config.name)
-                    tag_path = utils.get_tag("path", scan_path)
                     self._log_info(
-                        f"Stopping watch {tag_name} {tag_path}"
+                        f"Stopping watch {utils.get_tag("name", scan_config.name)} {utils.get_tag("path", scan_path)}"
                     )
                 break
             
