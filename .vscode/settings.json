@@ -1,0 +1,13 @@
+{
+    "cSpell.customDictionaries": {
+        "custom-dictionary-workspace": {
+            "name": "custom-dictionary-workspace",
+            "path": "${workspaceFolder:remotescan}/.cspell/custom-dictionary-workspace.txt",
+            "addWords": true,
+            "scope": "workspace",
+            "env": {
+                "CONFIG_PATH": "C:/Code/remote-scan-config.conf"
+            }
+        }
+    }
+}

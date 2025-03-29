@@ -225,7 +225,7 @@ class Remotescan(ServiceBase):
             if self.__notify_emby(emby_library):
                 target = utils.build_target_string(
                     target,
-                    utils.get_formatted_emby(),
+                    f"{utils.get_formatted_emby()}:{emby_library.server_name}",
                     emby_library.library
                 )
         if self.__notify_jellyfin(scan_config.jellyfin_library):

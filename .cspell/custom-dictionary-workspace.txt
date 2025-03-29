@@ -1,0 +1,5 @@
+# Custom Dictionary Words
+brikim
+Inotify
+jellyfin
+Remotescan
