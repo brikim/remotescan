@@ -54,8 +54,18 @@ A configuration file is required to use Remotescan. Create a config.yml file in 
     "plex_url": "http://0.0.0.0:32400",
     "plex_api_key": "",
 
-    "emby_url": "http://0.0.0.0:8096",
-    "emby_api_key": "",
+    "emby": [
+        {
+            "server_name": "Server1"
+            "url": "http://0.0.0.0:8096",
+            "api_key": ""
+        },
+        {
+            "server_name": "Server2"
+            "url": "http://0.0.0.0:8097",
+            "api_key": ""
+        }
+    ],
 
     "jellyfin_url": "http://0.0.0.0:8096",
     "jellyfin_api_key": "",
@@ -75,7 +85,10 @@ A configuration file is required to use Remotescan. Create a config.yml file in 
         "scans": [
             {"name": "scanName", 
              "plex_library": "plexLibraryName", 
-             "emby_library": "EmbyLibraryName", 
+             "emby": [
+                {"server_name": "Server1", "library": "Server1LibraryName"},
+                {"server_name": "Server2", "library": "Server2LibraryName"}
+             ], 
              "jellyfin_library": "JellyfinLibraryName",
              "paths": [
                 { "container_path": "/media/Path1" },
@@ -84,7 +97,10 @@ A configuration file is required to use Remotescan. Create a config.yml file in 
             },
             {"name": "scanName2", 
              "plex_library": "plexLibraryName", 
-             "emby_library": "EmbyLibraryName", 
+             "emby": [
+                {"server_name": "Server1", "library": "Server1LibraryName"},
+                {"server_name": "Server2", "library": "Server2LibraryName"}
+             ], 
              "jellyfin_library": "JellyfinLibraryName",
              "paths": [
                 { "container_path": "/media/Path3" }
@@ -108,10 +124,16 @@ You only have to define the variables for servers in your system. For plex only 
 | :----------- | :------------------------ |
 | plex_url           | Url to your plex server (Make sure you include the port if not reverse proxy) |
 | plex_api_key       | API Key to access your plex server |
-| emby_url           | Url to your emby server (Make sure you include the port if not reverse proxy) |
-| emby_api_key       | API Key to access your emby server |
+| emby               | Emby configuration for one or multiple servers |
 | jellyfin_url       | Url to your jellyfin server (Make sure you include the port if not reverse proxy) |
 | jellyfin_api_key   | API Key to access your jellyfin server |
+
+##### Emby
+| Emby Server | Function |
+| :----------- | :------------------------ |
+| server_name        | Name of this emby server to use as reference in this file |
+| url                | Url to your emby server (Make sure you include the port if not reverse proxy) |
+| api_key            | API Key to access this emby server |
 
 #### Gotify Logging
 Not required unless wanting to send Warnings or Errors to Gotify
@@ -134,9 +156,9 @@ Not required unless wanting to send Warnings or Errors to Gotify
 | Scans | Function |
 | :--------------- | :------------------------ |
 | name             | Unique name defined for this scan |
-| plex_library     | Plex library to notify of updates on monitor changes. Not required. |
-| emby_library     | Emby library to notify of updates on monitor changes. Not required. |
-| jellyfin_library | Jellyfin library to notify of updates on monitor changes. Not required. |
+| plex_library     | Plex library to notify of updates or changes. Not required. |
+| emby             | Emby section to notify one to many emby servers of updates or changes. Not required. |
+| jellyfin_library | Jellyfin library to notify of updates or changes. Not required. |
 | paths            | A list of physical paths defined by container_path to monitor for this scan. Paths should be based off of mounted volume /media or other as defined by user. Multiple paths needed if media server library consists of multiple paths |
 
 Optional. List of folders to ignore.
@@ -153,3 +175,9 @@ Optional. List of valid file extensions that must be in the folder to notify med
 | Valid File Extension | Function |
 | :--------------- | :------------------------ |
 | valid_file_extensions    | A comma separated list of extensions. If defined the monitor has to detect a change to this type of file before notifying media servers |
+
+##### Remotescan Emby Configuration
+| Remotescan Emby Config | Function |
+| :--------------- | :------------------------ |
+| server_name     | The server_name from the api configuration to notify |
+| library         | The library to notify for the Emby server |

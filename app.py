@@ -20,25 +20,23 @@ Usage:
     2. Run the app.py script.
 """
 
-REMOTE_SCAN_VERSION: str = "v2.1.0"
-
-import sys
-import os
-import json
-import signal
-import time
 from sys import platform
-from typing import Any
+import time
+import signal
+import json
+import os
+import sys
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from api.api_manager import ApiManager
-from common.log_manager import LogManager
 from common import utils
+from common.log_manager import LogManager
 from service.ServiceBase import ServiceBase
-
 if platform == "linux":
     from service.Remotescan import Remotescan
+
+REMOTE_SCAN_VERSION: str = "v3.0.0"
 
 # Global Variables
 api_manager: ApiManager = None
@@ -49,22 +47,24 @@ scheduler = BlockingScheduler()
 services: list[ServiceBase] = []
 ##########################
 
-def handle_sigterm(signum: int, frame: Any):
+
+def handle_sigterm(_sig, _frame):
     """Handles the SIGTERM signal for graceful shutdown."""
     log_manager.get_logger().info("SIGTERM received, shutting down ...")
-    for service in services:
-        service.shutdown()
+    for service_base in services:
+        service_base.shutdown()
     scheduler.shutdown(wait=True)
     sys.exit(0)
 
-def _create_services(data: dict):
+
+def _create_services(config: dict):
     """Creates and returns a list of services based on the configuration."""
     if platform == "linux":
-        if "remote_scan" in data:
+        if "remote_scan" in config:
             services.append(
                 Remotescan(
                     api_manager,
-                    data["remote_scan"],
+                    config["remote_scan"],
                     log_manager.get_logger(),
                     scheduler
                 )
@@ -74,73 +74,73 @@ def _create_services(data: dict):
                 "Configuration file problem no remote_scan data found!"
             )
 
+
 def _do_nothing() -> None:
     """A dummy function to keep the scheduler alive."""
     time.sleep(1)
-    
+
+
 conf_loc_path_file: str = ""
-config_file_valid: bool = True
-if "CONFIG_PATH" in os.environ:
+config_path_valid: bool = "CONFIG_PATH" in os.environ
+if config_path_valid:
     conf_loc_path_file = os.environ["CONFIG_PATH"].rstrip("/")
-else:
-    config_file_valid = False
+    if os.path.exists(conf_loc_path_file):
+        try:
+            # Load the configuration file
+            with open(conf_loc_path_file, "r", encoding="utf-8") as f:
+                data: dict = json.load(f)
 
-if config_file_valid and os.path.exists(conf_loc_path_file):
-    try:
-        # Load the configuration file
-        with open(conf_loc_path_file, "r") as f:
-            data: dict = json.load(f)
+            # Set up signal termination handle
+            signal.signal(signal.SIGTERM, handle_sigterm)
 
-        # Set up signal termination handle
-        signal.signal(signal.SIGTERM, handle_sigterm)
+            # Configure the gotify logging
+            log_manager.configure_gotify(data)
 
-        # Configure the gotify logging
-        log_manager.configure_gotify(data)
-        
-        log_manager.get_logger().info(
-            f"Starting Remotescan {REMOTE_SCAN_VERSION}"
-        )
-        
-        # Create the API Manager
-        api_manager = ApiManager(data, log_manager.get_logger())
-
-        # Create the services
-        _create_services(data)
-        
-        # Init the services
-        for service in services:
-            service.init_scheduler_jobs()
-        
-        if len(services) > 0:
-            # Add a job to do nothing to keep the script alive
-            scheduler.add_job(
-                _do_nothing,
-                trigger="interval",
-                hours=24
+            log_manager.get_logger().info(
+                "Starting Remotescan %s", REMOTE_SCAN_VERSION
             )
 
-            # Start the scheduler for all jobs
-            scheduler.start()
-    
-    except FileNotFoundError as e:
-        log_manager.get_logger().error(
-            f"Config file not found: {utils.get_tag('error', e)}"
-        )
-    except json.JSONDecodeError as e:
-        log_manager.get_logger().error(
-            f"Error decoding JSON in config file: {utils.get_tag('error', e)}"
-        )
-    except KeyError as e:
-        log_manager.get_logger().error(
-            f"Missing key in config file: {utils.get_tag('error', e)}"
-        )
-    except Exception as e:
-        log_manager.get_logger().error(
-            f"An unexpected error occurred: {utils.get_tag('error', e)}"
-        )
+            # Create the API Manager
+            api_manager = ApiManager(data, log_manager.get_logger())
+
+            # Create the services
+            _create_services(data)
+
+            # Init the services
+            for service in services:
+                service.init_scheduler_jobs()
+
+            if len(services) > 0:
+                # Add a job to do nothing to keep the script alive
+                scheduler.add_job(
+                    _do_nothing,
+                    trigger="interval",
+                    hours=24
+                )
+
+                # Start the scheduler for all jobs
+                scheduler.start()
+
+        except FileNotFoundError as e:
+            log_manager.get_logger().error(
+                "Config file not found: %s", utils.get_tag('error', e)
+            )
+        except json.JSONDecodeError as e:
+            log_manager.get_logger().error(
+                "Error decoding JSON in config file: %s",
+                utils.get_tag('error', e)
+            )
+        except KeyError as e:
+            log_manager.get_logger().error(
+                "Missing key in config file: %s", utils.get_tag('error', e)
+            )
+        except Exception as e:
+            log_manager.get_logger().error(
+                "An unexpected error occurred: %s", utils.get_tag('error', e)
+            )
 else:
     log_manager.get_logger().error(
-        f"Error finding config file {conf_loc_path_file}\n"
+        "Error finding config file %s", conf_loc_path_file
     )
 
 # END Main script run
