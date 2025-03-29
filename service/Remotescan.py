@@ -171,7 +171,7 @@ class Remotescan(ServiceBase):
         sever_config_info: ServerLibraryConfigInfo
     ) -> bool:
         if sever_config_info.library != "":
-            emby_api = self.api_manager.get_emby_api(ServerLibraryConfigInfo.server_name)
+            emby_api = self.api_manager.get_emby_api(sever_config_info.server_name)
             if emby_api is not None:
                 if emby_api.get_valid():
                     library_id = emby_api.get_library_id(sever_config_info.library)
