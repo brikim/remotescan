@@ -21,7 +21,6 @@ class ApiManager:
         """
         self.plex_api: PlexAPI = None
         self.emby_api_list: list[EmbyAPI] = []
-        self.emby_api: EmbyAPI = None
         self.jellyfin_api: JellyfinAPI = None
         self.logger = logger
 
@@ -32,7 +31,7 @@ class ApiManager:
             )
             if self.plex_api.get_valid():
                 self.logger.info(
-                    f"Connected to {utils.get_formatted_plex()}:{self.plex_api.get_name()} successfully"
+                    f"Connected to {utils.get_formatted_plex()}({self.plex_api.get_name()}) successfully"
                 )
             else:
                 tag_plex_url = utils.get_tag("url", config["plex_url"])
@@ -55,7 +54,7 @@ class ApiManager:
                     )
                     if self.emby_api_list[-1].get_valid():
                         self.logger.info(
-                            f"Connected to {utils.get_formatted_emby()}:{self.emby_api_list[-1].get_server_reported_name()} successfully"
+                            f"Connected to {utils.get_formatted_emby()}({self.emby_api_list[-1].get_server_reported_name()}) successfully"
                         )
                     else:
                         tag_emby_url = utils.get_tag(
@@ -79,7 +78,7 @@ class ApiManager:
             )
             if self.jellyfin_api.get_valid():
                 self.logger.info(
-                    f"Connected to {utils.get_formatted_jellyfin()}:{self.jellyfin_api.get_name()} successfully"
+                    f"Connected to {utils.get_formatted_jellyfin()}({self.jellyfin_api.get_name()}) successfully"
                 )
             else:
                 tag_jellyfin_url = utils.get_tag("url", config["jellyfin_url"])

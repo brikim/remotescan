@@ -36,7 +36,7 @@ from service.ServiceBase import ServiceBase
 if platform == "linux":
     from service.Remotescan import Remotescan
 
-REMOTE_SCAN_VERSION: str = "v3.0.0"
+REMOTE_SCAN_VERSION: str = "v3.0.1"
 
 # Global Variables
 api_manager: ApiManager = None
@@ -138,9 +138,11 @@ if config_path_valid:
             log_manager.get_logger().error(
                 "An unexpected error occurred: %s", utils.get_tag('error', e)
             )
+    else:
+        log_manager.get_logger().error(
+            "Error finding config file %s", conf_loc_path_file
+        )
 else:
-    log_manager.get_logger().error(
-        "Error finding config file %s", conf_loc_path_file
-    )
+    log_manager.get_logger().error("Environment variable CONFIG_PATH not found")
 
 # END Main script run
