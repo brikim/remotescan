@@ -1,8 +1,11 @@
+""" Emby API Module """
+
 from logging import Logger
 import requests
-from common import utils
+from requests.exceptions import RequestException
 
 from api.api_base import ApiBase
+from common import utils
 
 
 class EmbyAPI(ApiBase):
@@ -31,10 +34,8 @@ class EmbyAPI(ApiBase):
             logger (Logger): The logger instance for logging messages.
         """
         super().__init__(
-            url, api_key, utils.get_emby_ansi_code(), self.__module__, logger
+            server_name, url, api_key, utils.get_emby_ansi_code(), self.__module__, logger
         )
-        self.server_name = server_name
-        self.invalid_item_id = "0"
 
     def __get_api_url(self) -> str:
         """
@@ -54,15 +55,6 @@ class EmbyAPI(ApiBase):
         """
         return {"api_key": self.api_key}
 
-    def get_server_name(self) -> str:
-        """
-        Returns the server name pass in the constructor.
-
-        Returns:
-            str: The configured name of the server
-        """
-        return self.server_name
-
     def get_valid(self) -> bool:
         """
         Checks if the connection to the Emby Media Server is valid.
@@ -79,18 +71,9 @@ class EmbyAPI(ApiBase):
 
             if r.status_code < 300:
                 return True
-        except Exception:
+        except RequestException:
             pass
         return False
-
-    def get_invalid_item_id(self) -> str:
-        """
-        Returns the ID used to represent an invalid item.
-
-        Returns:
-            str: The invalid item ID.
-        """
-        return self.invalid_item_id
 
     def get_server_reported_name(self) -> str:
         """
@@ -114,11 +97,11 @@ class EmbyAPI(ApiBase):
                 self.logger.error(
                     f"{self.log_header} get_name {utils.get_tag('error', 'ServerName not found')}"
                 )
-        except Exception as e:
+        except RequestException as e:
             self.logger.error(
                 f"{self.log_header} get_name {utils.get_tag("error", e)}"
             )
-        return self.invalid_item_id
+        return self.get_invalid_type()
 
     def set_library_scan(self, library_id: str):
         """
@@ -129,17 +112,18 @@ class EmbyAPI(ApiBase):
         """
         try:
             headers = {"accept": "application/json"}
-            payload = {
-                "api_key": self.api_key,
-                "Recursive": "true",
-                "ImageRefreshMode": "Default",
-                "MetadataRefreshMode": "Default",
-                "ReplaceAllImages": "false",
-                "ReplaceAllMetadata": "false",
-            }
+
+            # Set up the required payload
+            payload: dict = self.__get_default_payload()
+            payload["Recursive"] = "true"
+            payload["ImageRefreshMode"] = "Default"
+            payload["MetadataRefreshMode"] = "Default"
+            payload["ReplaceAllImages"] = "false"
+            payload["ReplaceAllMetadata"] = "false"
+
             emby_url = f"{self.__get_api_url()}/Items/{library_id}/Refresh"
             requests.post(emby_url, headers=headers, params=payload, timeout=5)
-        except Exception as e:
+        except RequestException as e:
             self.logger.error(
                 f"{self.log_header} set_library_scan {utils.get_tag("error", e)}"
             )
@@ -164,11 +148,11 @@ class EmbyAPI(ApiBase):
             response = r.json()
 
             for library in response:
-                if "Name" in library and library["Name"] == name:
+                if "Name" in library and library["Name"] == name and "Id" in library:
                     return library["Id"]
-        except Exception as e:
+        except RequestException as e:
             self.logger.error(
                 f"{self.log_header} get_library_id {utils.get_tag("error", e)}"
             )
 
-        return self.invalid_item_id
+        return self.get_invalid_type()

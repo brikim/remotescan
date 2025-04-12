@@ -32,11 +32,11 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from api.api_manager import ApiManager
 from common import utils
 from common.log_manager import LogManager
-from service.ServiceBase import ServiceBase
+from service.service_base import ServiceBase
 if platform == "linux":
-    from service.Remotescan import Remotescan
+    from service.remote_scan import Remotescan
 
-REMOTE_SCAN_VERSION: str = "v3.0.1"
+REMOTE_SCAN_VERSION: str = "v3.1.0"
 
 # Global Variables
 api_manager: ApiManager = None

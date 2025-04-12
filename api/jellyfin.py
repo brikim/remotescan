@@ -1,8 +1,11 @@
+""" Jellyfin API Module """
+
 from logging import Logger
 import requests
-from common import utils
+from requests.exceptions import RequestException
 
 from api.api_base import ApiBase
+from common import utils
 
 
 class JellyfinAPI(ApiBase):
@@ -16,6 +19,7 @@ class JellyfinAPI(ApiBase):
 
     def __init__(
         self,
+        server_name: str,
         url: str,
         api_key: str,
         logger: Logger
@@ -29,9 +33,8 @@ class JellyfinAPI(ApiBase):
             logger (Logger): The logger instance for logging messages.
         """
         super().__init__(
-            url, api_key, utils.get_jellyfin_ansi_code(), self.__module__, logger
+            server_name, url, api_key, utils.get_jellyfin_ansi_code(), self.__module__, logger
         )
-        self.invalid_item_id = "0"
 
     def __get_api_url(self) -> str:
         """
@@ -67,20 +70,11 @@ class JellyfinAPI(ApiBase):
 
             if r.status_code < 300:
                 return True
-        except Exception:
+        except RequestException:
             pass
         return False
 
-    def get_invalid_item_id(self) -> str:
-        """
-        Returns the ID used to represent an invalid item.
-
-        Returns:
-            str: The invalid item ID.
-        """
-        return self.invalid_item_id
-
-    def get_name(self) -> str:
+    def get_server_reported_name(self) -> str:
         """
         Retrieves the friendly name of the Jellyfin Media Server.
 
@@ -102,11 +96,11 @@ class JellyfinAPI(ApiBase):
                 self.logger.error(
                     f"{self.log_header} get_name {utils.get_tag('error', 'ServerName not found')}"
                 )
-        except Exception as e:
+        except RequestException as e:
             self.logger.error(
                 f"{self.log_header} get_name {utils.get_tag("error", e)}"
             )
-        return self.invalid_item_id
+        return self.get_invalid_type()
 
     def set_library_scan(self, library_id: str):
         """
@@ -117,19 +111,22 @@ class JellyfinAPI(ApiBase):
         """
         try:
             headers = {"accept": "application/json"}
-            payload = {
-                "api_key": self.api_key,
-                "recursive": "true",
-                "imageRefreshMode": "Default",
-                "metadataRefreshMode": "Default",
-                "replaceAllImages": "false",
-                "replaceAllMetadata": "false",
-                "regenerateTrickplay": "false",
-            }
+
+            # Set up the required payload
+            payload: dict = self.__get_default_payload()
+            payload["recursive"] = "true"
+            payload["imageRefreshMode"] = "Default"
+            payload["metadataRefreshMode"] = "Default"
+            payload["replaceAllImages"] = "false"
+            payload["replaceAllMetadata"] = "false"
+            payload["regenerateTrickplay"] = "false"
 
             jellyfin_url = f"{self.__get_api_url()}/Items/{library_id}/Refresh"
-            requests.post(jellyfin_url, headers=headers, params=payload, timeout=5)
-        except Exception as e:
+            requests.post(
+                jellyfin_url, headers=headers,
+                params=payload, timeout=5
+            )
+        except RequestException as e:
             self.logger.error(
                 f"{self.log_header} set_library_scan {utils.get_tag("error", e)}"
             )
@@ -154,11 +151,11 @@ class JellyfinAPI(ApiBase):
             response = r.json()
 
             for library in response["Items"]:
-                if library["Name"] == name:
+                if "Name" in library and library["Name"] == name and "Id" in library:
                     return library["Id"]
-        except Exception as e:
+        except RequestException as e:
             self.logger.error(
                 f"{self.log_header} get_library_id {utils.get_tag("error", e)}"
             )
 
-        return self.invalid_item_id
+        return self.get_invalid_type()

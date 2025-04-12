@@ -1,3 +1,5 @@
+""" Gotify Plain Text Formatter Module """
+
 import logging
 
 from common.utils import remove_ansi_code_from_text

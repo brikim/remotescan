@@ -1,9 +1,12 @@
+""" Plex API Module """
+
 from logging import Logger
+
 from plexapi.server import PlexServer
-from common import utils
+from plexapi.exceptions import BadRequest, NotFound, Unauthorized
 
 from api.api_base import ApiBase
-
+from common import utils
 
 class PlexAPI(ApiBase):
     """
@@ -16,6 +19,7 @@ class PlexAPI(ApiBase):
 
     def __init__(
         self,
+        server_name: str,
         url: str,
         api_key: str,
         logger: Logger
@@ -29,6 +33,7 @@ class PlexAPI(ApiBase):
             logger (Logger): The logger instance for logging messages.
         """
         super().__init__(
+            server_name,
             url,
             api_key,
             utils.get_plex_ansi_code(),
@@ -47,18 +52,23 @@ class PlexAPI(ApiBase):
         try:
             self.plex_server.library.sections()
             return True
-        except Exception:
+        except (BadRequest, NotFound, Unauthorized):
             pass
         return False
 
-    def get_name(self) -> str:
+    def get_server_reported_name(self) -> str:
         """
         Retrieves the friendly name of the Plex Media Server.
 
         Returns:
             str: The friendly name of the Plex server.
         """
-        return self.plex_server.friendlyName
+        try:
+            return_name = self.plex_server.friendlyName
+            return return_name
+        except (BadRequest, NotFound, Unauthorized):
+            pass
+        return "Unknown Plex Server"
 
     def get_library_exists(self, library_name: str) -> bool:
         """
@@ -73,7 +83,7 @@ class PlexAPI(ApiBase):
         try:
             self.plex_server.library.section(library_name)
             return True
-        except Exception:
+        except (BadRequest, NotFound, Unauthorized):
             pass
         return False
 
@@ -87,7 +97,7 @@ class PlexAPI(ApiBase):
         try:
             library = self.plex_server.library.section(library_name)
             library.update()
-        except Exception as e:
+        except (BadRequest, NotFound, Unauthorized) as e:
             tag_library = utils.get_tag("library", library_name)
             tag_error = utils.get_tag("error", e)
             self.logger.error(

@@ -1,3 +1,4 @@
+""" Base class for all services in the application. """
 
 from logging import Logger
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -21,12 +22,15 @@ class ServiceBase:
         self.scheduler = scheduler
 
     def _log_info(self, message: str):
+        """ Log an info message. """
         self.logger.info(message)
 
     def _log_warning(self, message: str):
+        """ Log an warning message. """
         self.logger.warning(message)
 
     def _log_error(self, message: str):
+        """ Log an error message. """
         self.logger.error(message)
 
     def init_scheduler_jobs(self):

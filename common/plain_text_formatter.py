@@ -1,3 +1,5 @@
+""" Plain Text Formatter Module. """
+
 import logging
 from datetime import datetime
 from common.utils import remove_ansi_code_from_text

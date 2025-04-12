@@ -1,3 +1,4 @@
+""" Log Management Module """
 
 import logging
 from logging import Logger

@@ -1,7 +1,8 @@
+""" Gotify Logging Module """
 
 import logging
 import requests
-
+from requests.exceptions import RequestException
 
 class GotifyHandler(logging.Handler):
     """ 
@@ -50,5 +51,5 @@ class GotifyHandler(logging.Handler):
                 },
                 timeout=5,
             )
-        except Exception:
+        except RequestException:
             self.handleError(record)

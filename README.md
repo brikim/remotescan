@@ -51,24 +51,20 @@ A configuration file is required to use Remotescan. Create a config.yml file in 
 #### config.yml
 ```yaml
 {
-    "plex_url": "http://0.0.0.0:32400",
-    "plex_api_key": "",
-
-    "emby": [
-        {
-            "server_name": "Server1"
-            "url": "http://0.0.0.0:8096",
-            "api_key": ""
-        },
-        {
-            "server_name": "Server2"
-            "url": "http://0.0.0.0:8097",
-            "api_key": ""
-        }
+    "plex": [
+        {"server_name": "Server1", "url": "http://0.0.0.0:32400", "api_key": ""},
+        {"server_name": "Server2", "url": "http://0.0.0.0:32401", "api_key": ""}
     ],
 
-    "jellyfin_url": "http://0.0.0.0:8096",
-    "jellyfin_api_key": "",
+    "emby": [
+        {"server_name": "Server1", "url": "http://0.0.0.0:8096", "api_key": ""},
+        {"server_name": "Server2", "url": "http://0.0.0.0:8097", "api_key": ""}
+    ],
+
+    "jellyfin": [
+        {"server_name": "Server1", "url": "http://0.0.0.0:8096", "api_key": ""},
+        {"server_name": "Server2", "url": "http://0.0.0.0:8097", "api_key": ""}
+    ],
 
     "gotify_logging": {
         "enabled": "False",
@@ -83,32 +79,53 @@ A configuration file is required to use Remotescan. Create a config.yml file in 
         "seconds_between_notifies": 15,
         
         "scans": [
-            {"name": "scanName", 
-             "plex_library": "plexLibraryName", 
-             "emby": [
-                {"server_name": "Server1", "library": "Server1LibraryName"},
-                {"server_name": "Server2", "library": "Server2LibraryName"}
-             ], 
-             "jellyfin_library": "JellyfinLibraryName",
-             "paths": [
-                { "container_path": "/media/Path1" },
-                { "container_path": "/media/Path2" }
-             ]
+            {
+                "name": "scanName", 
+                "plex": [
+                    {"server_name": "PlexServerNameFromAbove", "library": "Server1LibraryName"},
+                    {"server_name": "PlexServerNameFromAbove", "library": "Server2LibraryName"}
+                ],
+
+                "emby": [
+                   {"server_name": "Server1", "library": "Server1LibraryName"},
+                   {"server_name": "Server2", "library": "Server2LibraryName"}
+                ],
+
+                "jellyfin": [
+                    {"server_name": "JellyfinServerNameFromAbove", "library": "Server1LibraryName"},
+                    {"server_name": "JellyfinServerNameFromAbove", "library": "Server2LibraryName"}
+                ],
+
+                "paths": [
+                   { "container_path": "/media/Path1" },
+                   { "container_path": "/media/Path2" }
+                ]
             },
-            {"name": "scanName2", 
-             "plex_library": "plexLibraryName", 
-             "emby": [
-                {"server_name": "Server1", "library": "Server1LibraryName"},
-                {"server_name": "Server2", "library": "Server2LibraryName"}
-             ], 
-             "jellyfin_library": "JellyfinLibraryName",
-             "paths": [
-                { "container_path": "/media/Path3" }
-             ]
+            {   
+                "name": "scanName2", 
+                "plex": [
+                    {"server_name": "PlexServerNameFromAbove", "library": "Server1LibraryName2"},
+                    {"server_name": "PlexServerNameFromAbove", "library": "Server2LibraryName2"}
+                ],
+
+                "emby": [
+                   {"server_name": "Server1", "library": "Server1LibraryName2"},
+                   {"server_name": "Server2", "library": "Server2LibraryName2"}
+                ],
+
+                "jellyfin": [
+                    {"server_name": "JellyfinServerNameFromAbove", "library": "Server1LibraryName2"},
+                    {"server_name": "JellyfinServerNameFromAbove", "library": "Server2LibraryName2"}
+                ],
+                
+                "paths": [
+                   { "container_path": "/media/Path1" },
+                   { "container_path": "/media/Path2" }
+                ]
             }
         ],
 
-        "ignore_folder_with_name": [
+        "ignore_folders": [
             {"ignore_folder": "someFolderToIgnore1"},
             {"ignore_folder": "someFolderToIgnore2"}
         ],
@@ -122,11 +139,16 @@ A configuration file is required to use Remotescan. Create a config.yml file in 
 You only have to define the variables for servers in your system. For plex only define plex_url and plex_api_key in your file. The emby and jellyfin variables are not required.
 | Media Server | Function |
 | :----------- | :------------------------ |
-| plex_url           | Url to your plex server (Make sure you include the port if not reverse proxy) |
-| plex_api_key       | API Key to access your plex server |
+| plex               | Plex configuration for one or multiple servers |
 | emby               | Emby configuration for one or multiple servers |
-| jellyfin_url       | Url to your jellyfin server (Make sure you include the port if not reverse proxy) |
-| jellyfin_api_key   | API Key to access your jellyfin server |
+| jellyfin           | Emby configuration for one or multiple servers |
+
+##### Plex
+| Plex Server | Function |
+| :----------- | :------------------------ |
+| server_name        | Name of this plex server to use as reference in this file |
+| url                | Url to your plex server (Make sure you include the port if not reverse proxy) |
+| api_key            | API Key to access this plex server |
 
 ##### Emby
 | Emby Server | Function |
@@ -134,6 +156,13 @@ You only have to define the variables for servers in your system. For plex only 
 | server_name        | Name of this emby server to use as reference in this file |
 | url                | Url to your emby server (Make sure you include the port if not reverse proxy) |
 | api_key            | API Key to access this emby server |
+
+##### Jellyfin
+| Jellyfin Server | Function |
+| :----------- | :------------------------ |
+| server_name        | Name of this jellyfin server to use as reference in this file |
+| url                | Url to your jellyfin server (Make sure you include the port if not reverse proxy) |
+| api_key            | API Key to access this jellyfin server |
 
 #### Gotify Logging
 Not required unless wanting to send Warnings or Errors to Gotify
@@ -156,11 +185,30 @@ Not required unless wanting to send Warnings or Errors to Gotify
 | Scans | Function |
 | :--------------- | :------------------------ |
 | name             | Unique name defined for this scan |
-| plex_library     | Plex library to notify of updates or changes. Not required. |
+| plex             | Plex section to notify one to many plex servers of updates or changes. Not required. |
 | emby             | Emby section to notify one to many emby servers of updates or changes. Not required. |
-| jellyfin_library | Jellyfin library to notify of updates or changes. Not required. |
+| jellyfin         | Jellyfin section to notify one to many jellyfin servers of updates or changes. Not required. |
 | paths            | A list of physical paths defined by container_path to monitor for this scan. Paths should be based off of mounted volume /media or other as defined by user. Multiple paths needed if media server library consists of multiple paths |
 
+##### Scan configuration Plex
+| Plex Scan Configuration | Function |
+| :----------- | :------------------------ |
+| server_name        | Name of this plex server from the configured plex servers |
+| library            | Plex library to notify of changes to this scan |
+
+##### Scan configuration Emby
+| Emby Scan Configuration | Function |
+| :----------- | :------------------------ |
+| server_name        | Name of this emby server from the configured emby servers |
+| library            | Emby library to notify of changes to this scan |
+
+##### Scan configuration Jellyfin
+| Jellyfin Scan Configuration | Function |
+| :----------- | :------------------------ |
+| server_name        | Name of this jellyfin server from the configured jellyfin servers |
+| library            | Jellyfin library to notify of changes to this scan |
+
+#### Ignore Folders
 Optional. List of folders to ignore.
 ```
 **WARNING**
@@ -171,13 +219,8 @@ An example usage would be for synology NAS ignore @eaDir folders
 | :--------------- | :------------------------ |
 | ignore_folder    | Ignore updates for paths containing the folder |
 
+#### Valid File Extensions
 Optional. List of valid file extensions that must be in the folder to notify media servers to re-scan
 | Valid File Extension | Function |
 | :--------------- | :------------------------ |
 | valid_file_extensions    | A comma separated list of extensions. If defined the monitor has to detect a change to this type of file before notifying media servers |
-
-##### Remotescan Emby Configuration
-| Remotescan Emby Config | Function |
-| :--------------- | :------------------------ |
-| server_name     | The server_name from the api configuration to notify |
-| library         | The library to notify for the Emby server |
