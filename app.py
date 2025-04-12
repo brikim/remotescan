@@ -36,7 +36,7 @@ from service.service_base import ServiceBase
 if platform == "linux":
     from service.remote_scan import Remotescan
 
-REMOTE_SCAN_VERSION: str = "v3.1.0"
+REMOTE_SCAN_VERSION: str = "v3.1.1"
 
 # Global Variables
 api_manager: ApiManager = None
@@ -97,7 +97,7 @@ if config_path_valid:
             log_manager.configure_gotify(data)
 
             log_manager.get_logger().info(
-                "Starting Remotescan %s", REMOTE_SCAN_VERSION
+                f"Starting Remotescan {REMOTE_SCAN_VERSION}"
             )
 
             # Create the API Manager

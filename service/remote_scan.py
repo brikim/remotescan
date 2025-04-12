@@ -6,7 +6,7 @@ from sys import platform
 import time
 import threading
 
-from threading import Thread
+from threading import Thread, Condition
 from dataclasses import dataclass, field
 from logging import Logger
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -71,6 +71,7 @@ class Remotescan(ServiceBase):
 
         self.threads: list[Thread] = []
         self.stop_threads: bool = False
+        self.monitor_condition = threading.Condition()
 
         if "seconds_monitor_rate" in config:
             self.seconds_monitor_rate = max(
@@ -303,9 +304,14 @@ class Remotescan(ServiceBase):
                     f"✅ Monitor moved to target {target} {utils.get_tag("path", path)}"
                 )
 
-    def __monitor(self):
+    def __monitor(self, condition: Condition):
         """ Thread to process new monitors """
         while not self.stop_threads:
+            # If no monitors sleep until notified
+            if len(self.monitors) == 0:
+                with condition:
+                    condition.wait()
+                    
             # Process any monitors currently in the system
             with self.monitor_lock:
                 if len(self.monitors) > 0:
@@ -343,7 +349,8 @@ class Remotescan(ServiceBase):
     def __add_file_monitor(
         self,
         path: str,
-        scan: ScanConfigInfo
+        scan: ScanConfigInfo,
+        monitor_condition: Condition
     ):
         """ Add a path to a monitor """
         monitor_found: bool = False
@@ -381,12 +388,15 @@ class Remotescan(ServiceBase):
             monitor_info.paths.append(path)
             with self.monitor_lock:
                 self.monitors.append(monitor_info)
+                with monitor_condition:
+                    monitor_condition.notify()
 
             self.__log_scan_moved_to_monitor(monitor_info.name, path)
 
     def __monitor_path(
         self,
-        scan_config: ScanConfigInfo
+        scan_config: ScanConfigInfo,
+        monitor_condition: Condition
     ):
         """ Setup the monitor for a scan configuration """
         scanner_mask = (
@@ -425,13 +435,13 @@ class Remotescan(ServiceBase):
                     self.__get_scan_path_valid(path)
                     and self.__get_scan_extension_valid(filename)
                 ):
-                    self.__add_file_monitor(path, scan_config)
+                    self.__add_file_monitor(path, scan_config, monitor_condition)
 
     def init_scheduler_jobs(self):
         for scan_config in self.scan_configs:
             thread = Thread(
                 target=self.__monitor_path,
-                args=(scan_config,)
+                args=(scan_config, self.monitor_condition,)
             )
             thread.start()
 
@@ -442,13 +452,16 @@ class Remotescan(ServiceBase):
         # and processing monitors added to the watch
         self.monitor_thread = Thread(
             target=self.__monitor,
-            args=()
+            args=(self.monitor_condition,)
         )
         self.monitor_thread.start()
 
     def shutdown(self):
         """ Shutdown all monitors and threads """
         self.stop_threads = True
+        
+        with self.monitor_condition:
+            self.monitor_condition.notify()
 
         # Create a temp file to notify the inotify adapters
         temp_file_path = "/temp.txt"
