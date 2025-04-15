@@ -300,9 +300,8 @@ class Remotescan(ServiceBase):
         # Loop through all the paths in this monitor and log that it has been sent to the target
         if target:
             for path in scan_config.paths:
-                self._log_info(
-                    f"✅ Monitor moved to target {target} {utils.get_tag("path", path)}"
-                )
+                self._log_info(f"✅ Monitor moved to target")
+                self._log_info(f"   {target} {utils.get_tag("path", path)}")
 
     def __monitor(self, condition: Condition):
         """ Thread to process new monitors """
@@ -342,9 +341,8 @@ class Remotescan(ServiceBase):
 
     def __log_scan_moved_to_monitor(self, name: str, path: str):
         """ Log when a scan has moved to a monitor"""
-        self._log_info(
-            f"➡️ Scan moved to monitor {utils.get_tag("name", name)} {utils.get_tag("path", path)}"
-        )
+        self._log_info(f"➡️ Scan moved to monitor")
+        self._log_info(f"   {utils.get_tag("name", name)} {utils.get_tag("path", path)}")
 
     def __add_file_monitor(
         self,
