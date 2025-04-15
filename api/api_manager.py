@@ -1,11 +1,10 @@
 """ API Manager Module """
 
-from logging import Logger
-
 from api.plex import PlexAPI
 from api.emby import EmbyAPI
 from api.jellyfin import JellyfinAPI
 from common import utils
+from common.log_manager import LogManager
 
 
 class ApiManager:
@@ -16,7 +15,7 @@ class ApiManager:
     def __init__(
         self,
         config: dict,
-        logger: Logger
+        log_manager: LogManager
     ):
         """
         Initializes the ApiManager and establishes connections to configured media servers.
@@ -24,7 +23,7 @@ class ApiManager:
         self.plex_api_list: list[PlexAPI] = []
         self.emby_api_list: list[EmbyAPI] = []
         self.jellyfin_api_list: list[JellyfinAPI] = []
-        self.logger = logger
+        self.log_manager = log_manager
 
         # Plex API setup
         if "plex" in config:
@@ -32,11 +31,11 @@ class ApiManager:
                 if "server_name" in server and "url" in server and "api_key" in server:
                     self.plex_api_list.append(
                         PlexAPI(
-                            server["server_name"], server["url"], server["api_key"], self.logger
+                            server["server_name"], server["url"], server["api_key"], self.log_manager
                         )
                     )
                     if self.plex_api_list[-1].get_valid():
-                        self.logger.info(
+                        self.log_manager.log_info(
                             f"Connected to {utils.get_formatted_plex()}({self.plex_api_list[-1].get_server_reported_name()}) successfully"
                         )
                     else:
@@ -46,11 +45,11 @@ class ApiManager:
                         tag_plex_api = utils.get_tag(
                             "api_key", server["api_key"]
                         )
-                        self.logger.warning(
+                        self.log_manager.log_warning(
                             f"{utils.get_formatted_plex()}({server["server_name"]}) server not available. Is this correct {tag_plex_url} {tag_plex_api}"
                         )
                 else:
-                    self.logger.warning(
+                    self.log_manager.log_warning(
                         f"{utils.get_formatted_plex()} configuration error must define name, url and api_key for a server"
                     )
 
@@ -60,11 +59,11 @@ class ApiManager:
                 if "server_name" in server and "url" in server and "api_key" in server:
                     self.emby_api_list.append(
                         EmbyAPI(
-                            server["server_name"], server["url"], server["api_key"], self.logger
+                            server["server_name"], server["url"], server["api_key"], self.log_manager
                         )
                     )
                     if self.emby_api_list[-1].get_valid():
-                        self.logger.info(
+                        self.log_manager.log_info(
                             f"Connected to {utils.get_formatted_emby()}({self.emby_api_list[-1].get_server_reported_name()}) successfully"
                         )
                     else:
@@ -74,11 +73,11 @@ class ApiManager:
                         tag_emby_api = utils.get_tag(
                             "api_key", server["api_key"]
                         )
-                        self.logger.warning(
+                        self.log_manager.log_warning(
                             f"{utils.get_formatted_emby()}({server["server_name"]}) server not available. Is this correct {tag_emby_url} {tag_emby_api}"
                         )
                 else:
-                    self.logger.warning(
+                    self.log_manager.log_warning(
                         f"{utils.get_formatted_emby()} configuration error must define name, url and api_key for a server"
                     )
 
@@ -88,11 +87,11 @@ class ApiManager:
                 if "server_name" in server and "url" in server and "api_key" in server:
                     self.jellyfin_api_list.append(
                         JellyfinAPI(
-                            server["server_name"], server["url"], server["api_key"], self.logger
+                            server["server_name"], server["url"], server["api_key"], self.log_manager
                         )
                     )
                     if self.jellyfin_api_list[-1].get_valid():
-                        self.logger.info(
+                        self.log_manager.log_info(
                             f"Connected to {utils.get_formatted_jellyfin()}({self.jellyfin_api_list[-1].get_server_reported_name()}) successfully"
                         )
                     else:
@@ -102,11 +101,11 @@ class ApiManager:
                         tag_jellyfin_api = utils.get_tag(
                             "api_key", server["api_key"]
                         )
-                        self.logger.warning(
+                        self.log_manager.log_warning(
                             f"{utils.get_formatted_jellyfin()}({server["server_name"]}) server not available. Is this correct {tag_jellyfin_url} {tag_jellyfin_api}"
                         )
                 else:
-                    self.logger.warning(
+                    self.log_manager.log_warning(
                         f"{utils.get_formatted_jellyfin()} configuration error must define name, url and api_key for a server"
                     )
 

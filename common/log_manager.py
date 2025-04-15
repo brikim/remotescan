@@ -28,6 +28,7 @@ class LogManager:
             log_name (str): The name of the logger.
         """
         self.logger = logging.getLogger(log_name)
+        self.handler_list: list[logging.Handler] = []
 
         log_date_format = "%Y-%m-%d %H:%M:%S"
         log_colors = {
@@ -43,16 +44,16 @@ class LogManager:
         file_formatter = PlainTextFormatter()
 
         # Create a file handler to write logs to a file
-        file_rotating_handler = RotatingFileHandler(
+        self.file_rotating_handler = RotatingFileHandler(
             "/logs/remotescan.log", maxBytes=100000, backupCount=5
         )
-        file_rotating_handler.setLevel(logging.INFO)
-        file_rotating_handler.setFormatter(file_formatter)
+        self.file_rotating_handler.setLevel(logging.INFO)
+        self.file_rotating_handler.setFormatter(file_formatter)
 
         # Create a stream handler to print logs to the console
-        console_info_handler = colorlog.StreamHandler()
-        console_info_handler.setLevel(logging.INFO)
-        console_info_handler.setFormatter(
+        self.console_info_handler = colorlog.StreamHandler()
+        self.console_info_handler.setLevel(logging.INFO)
+        self.console_info_handler.setFormatter(
             colorlog.ColoredFormatter(
                 "%(white)s%(asctime)s %(light_white)s- %(log_color)s%(levelname)s %(light_white)s- %(message)s",
                 log_date_format,
@@ -60,8 +61,14 @@ class LogManager:
             )
         )
 
-        self.logger.addHandler(file_rotating_handler)
-        self.logger.addHandler(console_info_handler)
+        # Configure Gotify logging if enabled in the configuration
+        self.gotify_handler: GotifyHandler = None
+
+        self.logger.addHandler(self.file_rotating_handler)
+        self.logger.addHandler(self.console_info_handler)
+        
+        self.handler_list.append(self.file_rotating_handler)
+        self.handler_list.append(self.console_info_handler)
 
     def configure_gotify(self, config: dict) -> None:
         """Configures Gotify logging if enabled in the configuration."""
@@ -79,17 +86,18 @@ class LogManager:
                 and "priority" in config["gotify_logging"]
             ):
                 gotify_formatter = GotifyPlainTextFormatter()
-                gotify_handler = GotifyHandler(
+                self.gotify_handler = GotifyHandler(
                     config["gotify_logging"]["url"],
                     config["gotify_logging"]["app_token"],
                     config["gotify_logging"]["message_title"],
                     config["gotify_logging"]["priority"]
                 )
-                gotify_handler.setLevel(logging.WARNING)
-                gotify_handler.setFormatter(gotify_formatter)
+                self.gotify_handler.setLevel(logging.WARNING)
+                self.gotify_handler.setFormatter(gotify_formatter)
 
                 # Add the gotify handler to the logger
-                self.logger.addHandler(gotify_handler)
+                self.logger.addHandler(self.gotify_handler)
+                self.handler_list.append(self.gotify_handler)
             else:
                 self.logger.warning(
                     "Configuration gotify_logging enabled is True but missing an attribute url, app_token, message_title or priority"
@@ -103,3 +111,21 @@ class LogManager:
             Logger: The logger instance.
         """
         return self.logger
+
+    def log_info(self, message: str):
+        """ Log an info message. """
+        self.logger.info(message)
+        for handler in self.handler_list:
+            handler.flush()
+
+    def log_warning(self, message: str):
+        """ Log an warning message. """
+        self.logger.warning(message)
+        for handler in self.handler_list:
+            handler.flush()
+
+    def log_error(self, message: str):
+        """ Log an error message. """
+        self.logger.error(message)
+        for handler in self.handler_list:
+            handler.flush()

@@ -8,11 +8,11 @@ import threading
 
 from threading import Thread, Condition
 from dataclasses import dataclass, field
-from logging import Logger
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from api.api_manager import ApiManager
 from common import utils
+from common.log_manager import LogManager
 from service.service_base import ServiceBase
 if platform == "linux":
     import external.PyInotify.inotify.adapters
@@ -47,10 +47,10 @@ class Remotescan(ServiceBase):
         self,
         api_manager: ApiManager,
         config: dict,
-        logger: Logger,
+        log_manager: LogManager,
         scheduler: BlockingScheduler
     ):
-        super().__init__(logger, scheduler)
+        super().__init__(log_manager, scheduler)
 
         self.api_manager = api_manager
 
@@ -415,7 +415,7 @@ class Remotescan(ServiceBase):
 
         # Setup the inotify watches for the current folder and all sub-folders
         i = external.PyInotify.inotify.adapters.InotifyTrees(
-            logger=self.logger,
+            logger=self.log_manager.get_logger(),
             paths=inotify_paths,
             mask=scanner_mask
         )

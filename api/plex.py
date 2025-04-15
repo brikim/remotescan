@@ -1,12 +1,11 @@
 """ Plex API Module """
 
-from logging import Logger
-
 from plexapi.server import PlexServer
 from plexapi.exceptions import BadRequest, NotFound, Unauthorized
 
 from api.api_base import ApiBase
 from common import utils
+from common.log_manager import LogManager
 
 class PlexAPI(ApiBase):
     """
@@ -22,15 +21,15 @@ class PlexAPI(ApiBase):
         server_name: str,
         url: str,
         api_key: str,
-        logger: Logger
+        log_manager: LogManager
     ):
         """
-        Initializes the PlexAPI with the server URL, API key, and logger.
+        Initializes the PlexAPI with the server URL, API key, and log_manager.
 
         Args:
             url (str): The base URL of the Plex Media Server.
             api_key (str): The API key for authenticating with the Plex server.
-            logger (Logger): The logger instance for logging messages.
+            log_manager (LogManager): The log_manager instance for logging messages.
         """
         super().__init__(
             server_name,
@@ -38,7 +37,7 @@ class PlexAPI(ApiBase):
             api_key,
             utils.get_plex_ansi_code(),
             self.__module__,
-            logger
+            log_manager
         )
         self.plex_server = PlexServer(url.rstrip("/"), api_key)
 
@@ -100,6 +99,6 @@ class PlexAPI(ApiBase):
         except (BadRequest, NotFound, Unauthorized) as e:
             tag_library = utils.get_tag("library", library_name)
             tag_error = utils.get_tag("error", e)
-            self.logger.error(
+            self.log_manager.log_error(
                 f"{self.log_header} set_library_scan {tag_library} {tag_error}"
             )

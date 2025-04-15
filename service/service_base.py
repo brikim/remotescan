@@ -1,8 +1,8 @@
 """ Base class for all services in the application. """
 
-from logging import Logger
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+from common.log_manager import LogManager
 
 class ServiceBase:
     """
@@ -14,24 +14,24 @@ class ServiceBase:
 
     def __init__(
         self,
-        logger: Logger,
+        log_manager: LogManager,
         scheduler: BlockingScheduler,
     ):
-        """Initializes the ServiceBase with a logger and scheduler."""
-        self.logger = logger
+        """Initializes the ServiceBase with a log_manager and scheduler."""
+        self.log_manager = log_manager
         self.scheduler = scheduler
 
     def _log_info(self, message: str):
         """ Log an info message. """
-        self.logger.info(message)
+        self.log_manager.log_info(message)
 
     def _log_warning(self, message: str):
         """ Log an warning message. """
-        self.logger.warning(message)
+        self.log_manager.log_warning(message)
 
     def _log_error(self, message: str):
         """ Log an error message. """
-        self.logger.error(message)
+        self.log_manager.log_error(message)
 
     def init_scheduler_jobs(self):
         """Initializes any scheduler jobs for the service."""

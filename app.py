@@ -36,7 +36,7 @@ from service.service_base import ServiceBase
 if platform == "linux":
     from service.remote_scan import Remotescan
 
-REMOTE_SCAN_VERSION: str = "v3.1.1"
+REMOTE_SCAN_VERSION: str = "v3.1.2"
 
 # Global Variables
 api_manager: ApiManager = None
@@ -50,7 +50,7 @@ services: list[ServiceBase] = []
 
 def handle_sigterm(_sig, _frame):
     """Handles the SIGTERM signal for graceful shutdown."""
-    log_manager.get_logger().info("SIGTERM received, shutting down ...")
+    log_manager.log_info("SIGTERM received, shutting down ...")
     for service_base in services:
         service_base.shutdown()
     scheduler.shutdown(wait=True)
@@ -65,12 +65,12 @@ def _create_services(config: dict):
                 Remotescan(
                     api_manager,
                     config["remote_scan"],
-                    log_manager.get_logger(),
+                    log_manager,
                     scheduler
                 )
             )
         else:
-            log_manager.get_logger().error(
+            log_manager.log_error(
                 "Configuration file problem no remote_scan data found!"
             )
 
@@ -96,12 +96,12 @@ if config_path_valid:
             # Configure the gotify logging
             log_manager.configure_gotify(data)
 
-            log_manager.get_logger().info(
+            log_manager.log_info(
                 f"Starting Remotescan {REMOTE_SCAN_VERSION}"
             )
 
             # Create the API Manager
-            api_manager = ApiManager(data, log_manager.get_logger())
+            api_manager = ApiManager(data, log_manager)
 
             # Create the services
             _create_services(data)
@@ -122,27 +122,26 @@ if config_path_valid:
                 scheduler.start()
 
         except FileNotFoundError as e:
-            log_manager.get_logger().error(
-                "Config file not found: %s", utils.get_tag('error', e)
+            log_manager.log_error(
+                f"Config file not found: {utils.get_tag('error', e)}"
             )
         except json.JSONDecodeError as e:
-            log_manager.get_logger().error(
-                "Error decoding JSON in config file: %s",
-                utils.get_tag('error', e)
+            log_manager.log_error(
+                f"Error decoding JSON in config file: {utils.get_tag('error', e)}",
             )
         except KeyError as e:
-            log_manager.get_logger().error(
-                "Missing key in config file: %s", utils.get_tag('error', e)
+            log_manager.log_error(
+                f"Missing key in config file: {utils.get_tag('error', e)}"
             )
         except Exception as e:
-            log_manager.get_logger().error(
-                "An unexpected error occurred: %s", utils.get_tag('error', e)
+            log_manager.log_error(
+                f"An unexpected error occurred: {utils.get_tag('error', e)}"
             )
     else:
-        log_manager.get_logger().error(
-            "Error finding config file %s", conf_loc_path_file
+        log_manager.log_error(
+            f"Error finding config file {conf_loc_path_file}"
         )
 else:
-    log_manager.get_logger().error("Environment variable CONFIG_PATH not found")
+    log_manager.log_error("Environment variable CONFIG_PATH not found")
 
 # END Main script run

@@ -1,11 +1,11 @@
 """ Emby API Module """
 
-from logging import Logger
 import requests
 from requests.exceptions import RequestException
 
 from api.api_base import ApiBase
 from common import utils
+from common.log_manager import LogManager
 
 
 class EmbyAPI(ApiBase):
@@ -22,19 +22,23 @@ class EmbyAPI(ApiBase):
         server_name: str,
         url: str,
         api_key: str,
-        logger: Logger
+        log_manager: LogManager
     ):
         """
-        Initializes the EmbyAPI with the server URL, API key, and logger.
+        Initializes the EmbyAPI with the server URL, API key, and log_manager.
 
         Args:
             server_name (str): The name of this emby server
             url (str): The base URL of the Emby Media Server.
             api_key (str): The API key for authenticating with the Emby server.
-            logger (Logger): The logger instance for logging messages.
+            log_manager (LogManager): The log manager instance for logging messages.
         """
         super().__init__(
-            server_name, url, api_key, utils.get_emby_ansi_code(), self.__module__, logger
+            server_name,
+            url, api_key,
+            utils.get_emby_ansi_code(),
+            self.__module__,
+            log_manager
         )
 
     def __get_api_url(self) -> str:
@@ -94,11 +98,11 @@ class EmbyAPI(ApiBase):
             if "ServerName" in response:
                 return response["ServerName"]
             else:
-                self.logger.error(
+                self.log_manager.log_error(
                     f"{self.log_header} get_name {utils.get_tag('error', 'ServerName not found')}"
                 )
         except RequestException as e:
-            self.logger.error(
+            self.log_manager.log_error(
                 f"{self.log_header} get_name {utils.get_tag("error", e)}"
             )
         return self.get_invalid_type()
@@ -124,7 +128,7 @@ class EmbyAPI(ApiBase):
             emby_url = f"{self.__get_api_url()}/Items/{library_id}/Refresh"
             requests.post(emby_url, headers=headers, params=payload, timeout=5)
         except RequestException as e:
-            self.logger.error(
+            self.log_manager.log_error(
                 f"{self.log_header} set_library_scan {utils.get_tag("error", e)}"
             )
 
@@ -151,7 +155,7 @@ class EmbyAPI(ApiBase):
                 if "Name" in library and library["Name"] == name and "Id" in library:
                     return library["Id"]
         except RequestException as e:
-            self.logger.error(
+            self.log_manager.log_error(
                 f"{self.log_header} get_library_id {utils.get_tag("error", e)}"
             )
 

@@ -1,16 +1,15 @@
 """ API Base Module """
 
-from logging import Logger
 from typing import Any
 
 from common import utils
-
+from common.log_manager import LogManager
 
 class ApiBase:
     """
     Base class for API interactions with media servers.
     Provides common functionality for API classes like setting up the URL,
-    API key, logger, and log header.
+    API key, log_manager, and log header.
     """
 
     def __init__(
@@ -20,10 +19,10 @@ class ApiBase:
         api_key: str,
         ansi_code: str,
         module: str,
-        logger: Logger
+        log_manager: LogManager
     ):
         """
-        Initializes the ApiBase with the server URL, API key, ANSI code, module name, and logger.
+        Initializes the ApiBase with the server URL, API key, ANSI code, module name, and log_manager.
 
         Args:
             server_name (str): The name to identify this server
@@ -31,12 +30,12 @@ class ApiBase:
             api_key (str): The API key for authenticating with the server.
             ansi_code (str): The ANSI escape code for log header coloring.
             module (str): The name of the module using this class.
-            logger (Logger): The logger instance for logging messages.
+            log_manager (LogManager): The log_manager instance for logging messages.
         """
         self.server_name = server_name
         self.url = url.rstrip("/")
         self.api_key = api_key
-        self.logger = logger
+        self.log_manager = log_manager
         self.invalid_item_id = "0"
         self.log_header = utils.get_log_header(ansi_code, module)
         self.invalid_type = None
