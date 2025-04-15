@@ -269,6 +269,13 @@ class Remotescan(ServiceBase):
                 )
         return False
 
+    def __get_folder_name(self, path: str) -> str:
+        """ Get the folder name from the path """
+        last_index = path.rfind("/")
+        if last_index == -1:
+            return path
+        return path[last_index + 1:]
+
     def _notify_media_servers(self, scan_config: ScanConfigInfo):
         """ Notify all the configured media servers to scan the library """
         # all the libraries in this monitor group are identical so only one scan is required
@@ -300,8 +307,9 @@ class Remotescan(ServiceBase):
         # Loop through all the paths in this monitor and log that it has been sent to the target
         if target:
             for path in scan_config.paths:
-                self._log_info(f"✅ Monitor moved to target")
-                self._log_info(f"   {target} {utils.get_tag("path", path)}")
+                self._log_info(
+                    f"✅ Monitor moved to target {target} {utils.get_tag("folder", self.__get_folder_name(path))}"
+                )
 
     def __monitor(self, condition: Condition):
         """ Thread to process new monitors """
@@ -341,8 +349,9 @@ class Remotescan(ServiceBase):
 
     def __log_scan_moved_to_monitor(self, name: str, path: str):
         """ Log when a scan has moved to a monitor"""
-        self._log_info(f"➡️ Scan moved to monitor")
-        self._log_info(f"   {utils.get_tag("name", name)} {utils.get_tag("path", path)}")
+        self._log_info(
+            f"➡️ Scan moved to monitor {utils.get_tag('name', name)} {utils.get_tag("folder", self.__get_folder_name(path))}"
+        )
 
     def __add_file_monitor(
         self,
