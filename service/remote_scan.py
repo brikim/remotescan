@@ -276,7 +276,7 @@ class Remotescan(ServiceBase):
             return path
         return path[last_index + 1:]
 
-    def _notify_media_servers(self, scan_config: ScanConfigInfo):
+    def __notify_media_servers(self, scan_config: ScanConfigInfo):
         """ Notify all the configured media servers to scan the library """
         # all the libraries in this monitor group are identical so only one scan is required
         target: str = ""
@@ -284,24 +284,24 @@ class Remotescan(ServiceBase):
             if self.__notify_plex(plex_library):
                 target = utils.build_target_string(
                     target,
-                    f"{utils.get_formatted_plex()}({plex_library.server_name})",
-                    plex_library.library
+                    utils.get_formatted_plex(),
+                    plex_library.server_name
                 )
 
         for emby_library in scan_config.emby_library_list:
             if self.__notify_emby(emby_library):
                 target = utils.build_target_string(
                     target,
-                    f"{utils.get_formatted_emby()}({emby_library.server_name})",
-                    emby_library.library
+                    utils.get_formatted_emby(),
+                    emby_library.server_name
                 )
 
         for jellyfin_library in scan_config.jellyfin_library_list:
             if self.__notify_jellyfin(jellyfin_library):
                 target = utils.build_target_string(
                     target,
-                    f"{utils.get_formatted_jellyfin()}({jellyfin_library.server_name})",
-                    jellyfin_library.library
+                    utils.get_formatted_jellyfin(),
+                    jellyfin_library.server_name
                 )
 
         # Loop through all the paths in this monitor and log that it has been sent to the target
@@ -340,7 +340,7 @@ class Remotescan(ServiceBase):
                                 if monitor.name != current_monitor.name:
                                     new_monitors.append(monitor)
 
-                            self._notify_media_servers(current_monitor)
+                            self.__notify_media_servers(current_monitor)
                             self.monitors = new_monitors
 
             time.sleep(self.seconds_monitor_rate)

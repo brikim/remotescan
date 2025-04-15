@@ -69,10 +69,10 @@ def remove_ansi_code_from_text(text: str) -> str:
     return ansi_escape.sub('', text)
 
 
-def build_target_string(current_target: str, new_target: str, library: str) -> str:
+def build_target_string(current_target: str, new_target: str, target_instance: str) -> str:
     """
-    Builds a target string by combining current and new targets, optionally with a library.
+    Builds a target string by combining current and new targets, optionally with a target instance
     """
     if not current_target:
-        return f"{new_target}:{library}" if library else new_target
-    return f"{current_target} & {new_target}:{library}" if library else f"{current_target} & {new_target}"
+        return f"{new_target}({target_instance})" if target_instance else new_target
+    return f"{current_target},{new_target}:({target_instance})" if target_instance else f"{current_target},{new_target}"
