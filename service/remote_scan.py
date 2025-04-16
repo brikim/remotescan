@@ -274,7 +274,9 @@ class Remotescan(ServiceBase):
         last_index = path.rfind("/")
         if last_index != -1:
             folder_name = path[last_index + 1:]
-            if folder_name.find("Season") != -1:
+            
+            # Check if Season is in the folder name and the length is less then Season ## as an example
+            if folder_name.find("Season") != -1 and len(folder_name) < 10:
                 season_last_index = path.rfind("/", 0, last_index)
                 if season_last_index != -1:
                     return path[season_last_index + 1:]
