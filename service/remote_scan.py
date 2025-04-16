@@ -275,11 +275,11 @@ class Remotescan(ServiceBase):
         if last_index != -1:
             folder_name = path[last_index + 1:]
             if folder_name.find("Season") != -1:
-                season_last_index = folder_name.rfind("/", 0, last_index)
+                season_last_index = path.rfind("/", 0, last_index)
                 if season_last_index != -1:
                     return path[season_last_index + 1:]
             else:
-                return path[last_index + 1:]
+                return folder_name
         return path
 
     def __notify_media_servers(self, scan_config: ScanConfigInfo):
