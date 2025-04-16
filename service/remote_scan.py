@@ -272,9 +272,15 @@ class Remotescan(ServiceBase):
     def __get_folder_name(self, path: str) -> str:
         """ Get the folder name from the path """
         last_index = path.rfind("/")
-        if last_index == -1:
-            return path
-        return path[last_index + 1:]
+        if last_index != -1:
+            folder_name = path[last_index + 1:]
+            if folder_name.find("Season") != -1:
+                season_last_index = folder_name.rfind("/", last_index + 1)
+                if season_last_index != -1:
+                    return path[season_last_index + 1:]
+            else:
+                return path[last_index + 1:]
+        return path
 
     def __notify_media_servers(self, scan_config: ScanConfigInfo):
         """ Notify all the configured media servers to scan the library """
