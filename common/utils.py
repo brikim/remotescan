@@ -75,4 +75,4 @@ def build_target_string(current_target: str, new_target: str, target_instance: s
     """
     if not current_target:
         return f"{new_target}({target_instance})" if target_instance else new_target
-    return f"{current_target},{new_target}:({target_instance})" if target_instance else f"{current_target},{new_target}"
+    return f"{current_target},{new_target}({target_instance})" if target_instance else f"{current_target},{new_target}"
