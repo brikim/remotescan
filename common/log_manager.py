@@ -3,6 +3,7 @@
 import logging
 from logging import Logger
 from logging.handlers import RotatingFileHandler
+import sys
 
 import colorlog
 
@@ -51,7 +52,7 @@ class LogManager:
         self.file_rotating_handler.setFormatter(file_formatter)
 
         # Create a stream handler to print logs to the console
-        self.console_info_handler = colorlog.StreamHandler()
+        self.console_info_handler = colorlog.StreamHandler(sys.stdout)
         self.console_info_handler.setLevel(logging.INFO)
         self.console_info_handler.setFormatter(
             colorlog.ColoredFormatter(
