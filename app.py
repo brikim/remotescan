@@ -36,7 +36,7 @@ from service.service_base import ServiceBase
 if platform == "linux":
     from service.remote_scan import Remotescan
 
-REMOTE_SCAN_VERSION: str = "v3.1.4"
+REMOTE_SCAN_VERSION: str = "v3.1.5"
 
 # Global Variables
 api_manager: ApiManager = None
